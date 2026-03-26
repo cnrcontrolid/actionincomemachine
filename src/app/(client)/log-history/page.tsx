@@ -284,7 +284,7 @@ export default function LogHistoryPage() {
   );
 }
 
-function InlineEditFields({ ef }: { ef: (key: string) => { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void; className: string } }) {
+function InlineEditFields({ ef }: { ef: (key: keyof EditRow) => { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void; className: string } }) {
   const fields = [
     { key: "income_total", label: "Income ($)", type: "number" },
     { key: "expenses", label: "Expenses ($)", type: "number" },
@@ -297,7 +297,7 @@ function InlineEditFields({ ef }: { ef: (key: string) => { value: string; onChan
       {fields.map(({ key, label, type }) => (
         <div key={key}>
           <label className="text-xs font-medium text-gray-600 mb-1 block">{label}</label>
-          <input type={type} min="0" {...ef(key)} />
+          <input type={type} min="0" {...ef(key as keyof EditRow)} />
         </div>
       ))}
       <div className="col-span-2 sm:col-span-3">
