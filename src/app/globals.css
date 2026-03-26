@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-cream text-charcoal font-body antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-heading;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl border border-amber-light shadow-sm p-6;
+  }
+  .btn-primary {
+    @apply bg-amber-brand text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-amber-wash text-amber-brand font-semibold px-5 py-2.5 rounded-xl border border-amber-light hover:bg-amber-light transition-colors;
+  }
+  .btn-ghost {
+    @apply text-warmgray font-medium px-4 py-2 rounded-xl hover:bg-amber-wash transition-colors;
+  }
+  .input {
+    @apply w-full border border-amber-light rounded-xl px-4 py-2.5 text-charcoal bg-white placeholder:text-warmgray focus:outline-none focus:ring-2 focus:ring-amber-brand/30 focus:border-amber-brand transition-colors;
+  }
+  .label {
+    @apply block text-sm font-medium text-charcoal mb-1.5;
+  }
+  .badge-critical {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700;
+  }
+  .badge-major {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-wash text-amber-brand;
+  }
+  .badge-met {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700;
+  }
+}
