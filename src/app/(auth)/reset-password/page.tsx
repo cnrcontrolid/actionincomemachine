@@ -98,8 +98,8 @@ export default function ResetPasswordPage() {
       )}
       {!success && (
         <p className="text-sm text-warmgray text-center mt-4">
-          <Link href="/login" className="text-amber-brand font-medium hover:underline">
-            Back to sign in
+          <Link href="/dashboard" className="text-amber-brand font-medium hover:underline">
+            Back to dashboard
           </Link>
         </p>
       )}
