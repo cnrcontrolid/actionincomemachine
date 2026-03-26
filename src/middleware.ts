@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Public routes (no auth needed)
-  const isPublic = pathname === "/login" || pathname === "/register" || pathname.startsWith("/api/auth") || pathname.startsWith("/api/whatsapp/webhook");
+  const isPublic = pathname === "/login" || pathname === "/register" || pathname === "/forgot-password" || pathname === "/reset-password" || pathname.startsWith("/api/auth") || pathname.startsWith("/api/whatsapp/webhook");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
