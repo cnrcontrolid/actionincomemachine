@@ -1,9 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { Resend } from "resend";
+import { sendEmail } from "@/lib/resend";
 import { replaceTokens } from "@/lib/email-tokens";
 import { NextResponse } from "next/server";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function PATCH(
   request: Request,
@@ -63,8 +61,7 @@ export async function PATCH(
         days_remaining: "—",
       });
 
-      await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL!,
+      await sendEmail({
         to: clientProfile.email,
         subject: replaceTokens(seq.subject, { client_name: clientProfile.full_name ?? "" }),
         html,
