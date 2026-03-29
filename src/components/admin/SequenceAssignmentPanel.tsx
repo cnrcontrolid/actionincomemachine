@@ -14,6 +14,7 @@ interface Props {
 export default function SequenceAssignmentPanel({ sequenceId, clients, goals, existing }: Props) {
   const [assignments, setAssignments] = useState<EmailSequenceAssignment[]>(existing);
   const [saving, setSaving] = useState<string | null>(null);
+  const supabase = createClient();
 
   const goalMap = Object.fromEntries(goals.map((g) => [g.client_id, g]));
 
@@ -22,7 +23,6 @@ export default function SequenceAssignmentPanel({ sequenceId, clients, goals, ex
     if (!goal) return;
 
     setSaving(clientId);
-    const supabase = createClient();
     const { data } = await supabase
       .from("email_sequence_assignments")
       .upsert(
@@ -43,7 +43,6 @@ export default function SequenceAssignmentPanel({ sequenceId, clients, goals, ex
 
   async function unassign(assignmentId: string, clientId: string) {
     setSaving(clientId);
-    const supabase = createClient();
     await supabase.from("email_sequence_assignments").delete().eq("id", assignmentId);
     setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
     setSaving(null);

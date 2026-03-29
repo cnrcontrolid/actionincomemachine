@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle2, Circle, AlertCircle, ChevronRight } from "lucide-react";
 import clsx from "clsx";
 import type { Target } from "@/types";
@@ -17,6 +17,11 @@ export default function TargetsList({ targets, canMarkMet = true }: TargetsListP
   const [localMet, setLocalMet] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(targets.map((t) => [t.id, t.is_met]))
   );
+
+  // Sync when targets are refreshed from server
+  useEffect(() => {
+    setLocalMet(Object.fromEntries(targets.map((t) => [t.id, t.is_met])));
+  }, [targets]);
 
   async function toggleMet(target: Target) {
     if (!canMarkMet || updating) return;

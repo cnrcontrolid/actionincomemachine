@@ -24,12 +24,19 @@ export default async function DashboardPage() {
     .eq("status", "active")
     .single() as { data: Goal | null };
 
-  // Fetch all daily logs for revenue total
+  // Fetch daily logs for active goal (capped at 90 — one per day for 90-day program)
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  const cutoff = ninetyDaysAgo.toISOString().slice(0, 10);
+
   const { data: allLogs } = await supabase
     .from("daily_logs")
     .select("*")
     .eq("client_id", user.id)
-    .eq("goal_id", goal?.id ?? "none") as { data: DailyLog[] | null };
+    .eq("goal_id", goal?.id ?? "none")
+    .gte("log_date", cutoff)
+    .order("log_date", { ascending: false })
+    .limit(90) as { data: DailyLog[] | null };
 
   // Today's log
   const todayLog = (allLogs ?? []).find((l) => l.log_date === today) ?? null;

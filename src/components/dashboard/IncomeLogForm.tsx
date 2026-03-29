@@ -45,28 +45,33 @@ export default function IncomeLogForm({ goalId, logDate, existing }: IncomeLogFo
       return;
     }
 
+    const controller = new AbortController();
+
     // Fetch log for other dates
     async function fetchLog() {
-      const res = await fetch(`/api/daily-log?goal_id=${goalId}&log_date=${selectedDate}`);
-      if (res.ok) {
-        const { data } = await res.json();
-        setExistingLog(data ?? null);
-        if (data) {
-          setForm({
-            income_total: data.income_total?.toString() ?? "0",
-            expenses: data.expenses?.toString() ?? "0",
-            money_in_bank: data.money_in_bank?.toString() ?? "0",
-            posts_count: data.posts_count?.toString() ?? "0",
-            sales_calls_count: data.sales_calls_count?.toString() ?? "0",
-            notes: data.notes ?? "",
-          });
-        } else {
-          setForm({ income_total: "0", expenses: "0", money_in_bank: "0", posts_count: "0", sales_calls_count: "0", notes: "" });
-        }
+      const res = await fetch(`/api/daily-log?goal_id=${goalId}&log_date=${selectedDate}`, {
+        signal: controller.signal,
+      });
+      if (!res.ok) return;
+      const { data } = await res.json();
+      setExistingLog(data ?? null);
+      if (data) {
+        setForm({
+          income_total: data.income_total?.toString() ?? "0",
+          expenses: data.expenses?.toString() ?? "0",
+          money_in_bank: data.money_in_bank?.toString() ?? "0",
+          posts_count: data.posts_count?.toString() ?? "0",
+          sales_calls_count: data.sales_calls_count?.toString() ?? "0",
+          notes: data.notes ?? "",
+        });
+      } else {
+        setForm({ income_total: "0", expenses: "0", money_in_bank: "0", posts_count: "0", sales_calls_count: "0", notes: "" });
       }
     }
     fetchLog();
-  }, [selectedDate, goalId, logDate, existing]);
+    return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, goalId, logDate, existing?.id]);
 
   function field(key: keyof typeof form) {
     return {
@@ -81,7 +86,7 @@ export default function IncomeLogForm({ goalId, logDate, existing }: IncomeLogFo
     setSaving(true);
     setSaved(false);
 
-    await fetch("/api/daily-log", {
+    const res = await fetch("/api/daily-log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -97,6 +102,7 @@ export default function IncomeLogForm({ goalId, logDate, existing }: IncomeLogFo
     });
 
     setSaving(false);
+    if (!res.ok) return;
     setSaved(true);
     router.refresh();
     setTimeout(() => setSaved(false), 3000);

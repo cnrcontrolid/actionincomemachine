@@ -11,7 +11,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { eachDayOfInterval, parseISO, format, isWithinInterval } from "date-fns";
+import { useMemo } from "react";
+import { eachDayOfInterval, parseISO, format } from "date-fns";
 import type { Goal, DailyLog, Profile } from "@/types";
 import Link from "next/link";
 
@@ -77,42 +78,28 @@ export default function CombinedProgressChart({ goal, logs, profile }: CombinedP
     );
   }
 
-  // Build chart data: one entry per day from start_date to end_date
-  let chartData: { date: string; income: number; actions: number; pace: number }[] = [];
-
-  try {
-    const start = parseISO(goal.start_date);
-    const end = parseISO(goal.end_date);
-    const allDays = eachDayOfInterval({ start, end });
-    const logMap = new Map(logs.map((l) => [l.log_date, l]));
-    const dailyPace = goal.revenue_target / 90;
-
-    // Build action completions map: count completed actions per date from logs
-    // (We only have daily_logs here — actions completed per day is approximated by posts_count+sales_calls_count)
-    chartData = allDays.map((day, idx) => {
-      const dateStr = format(day, "yyyy-MM-dd");
-      const log = logMap.get(dateStr);
-      const income = log
-        ? (log.income_total > 0
-            ? log.income_total
-            : log.income_low + log.income_mid + log.income_high)
-        : 0;
-      const actions = log ? (log.posts_count ?? 0) + (log.sales_calls_count ?? 0) : 0;
-      return {
-        date: dateStr,
-        income,
-        actions,
-        pace: Math.round(dailyPace * (idx + 1)),
-      };
-    });
-  } catch {
-    // Invalid dates — just show empty
-  }
-
-  // Only show week-interval ticks on X axis
-  const xTicks = chartData
-    .filter((_, i) => i % 7 === 0)
-    .map((d) => d.date);
+  // Build chart data memoized — only recomputes when goal dates/target or logs change
+  const { chartData, xTicks } = useMemo(() => {
+    let data: { date: string; displayDate: string; income: number; actions: number; pace: number }[] = [];
+    try {
+      const start = parseISO(goal.start_date);
+      const end = parseISO(goal.end_date);
+      const allDays = eachDayOfInterval({ start, end });
+      const logMap = new Map(logs.map((l) => [l.log_date, l]));
+      const dailyPace = goal.revenue_target / 90;
+      data = allDays.map((day, idx) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const log = logMap.get(dateStr);
+        const income = log
+          ? (log.income_total > 0 ? log.income_total : log.income_low + log.income_mid + log.income_high)
+          : 0;
+        const actions = log ? (log.posts_count ?? 0) + (log.sales_calls_count ?? 0) : 0;
+        return { date: dateStr, displayDate: format(day, "MMM d"), income, actions, pace: Math.round(dailyPace * (idx + 1)) };
+      });
+    } catch { /* invalid dates — show empty */ }
+    const ticks = data.filter((_, i) => i % 7 === 0).map((d) => d.date);
+    return { chartData: data, xTicks: ticks };
+  }, [goal.start_date, goal.end_date, goal.revenue_target, logs]);
 
   return (
     <div className="card space-y-6">
@@ -130,9 +117,7 @@ export default function CombinedProgressChart({ goal, logs, profile }: CombinedP
             <XAxis
               dataKey="date"
               ticks={xTicks}
-              tickFormatter={(v) => {
-                try { return format(parseISO(v), "MMM d"); } catch { return v; }
-              }}
+              tickFormatter={(v) => chartData.find((d) => d.date === v)?.displayDate ?? v}
               tick={{ fontSize: 11, fill: "#6B7280" }}
               tickLine={false}
             />
@@ -159,9 +144,7 @@ export default function CombinedProgressChart({ goal, logs, profile }: CombinedP
                 if (name === "Pace Target") return [`$${value.toLocaleString()}`, name];
                 return [value, name];
               }}
-              labelFormatter={(label) => {
-                try { return format(parseISO(label as string), "MMM d, yyyy"); } catch { return label; }
-              }}
+              labelFormatter={(label) => chartData.find((d) => d.date === label)?.displayDate ?? String(label)}
             />
             <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
             <Bar

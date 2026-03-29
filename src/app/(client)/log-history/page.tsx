@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { Pencil, Check, X, Plus } from "lucide-react";
@@ -54,7 +54,8 @@ export default function LogHistoryPage() {
       .from("daily_logs")
       .select("*")
       .eq("client_id", user.id)
-      .order("log_date", { ascending: false }) as { data: DailyLog[] | null };
+      .order("log_date", { ascending: false })
+      .limit(90) as { data: DailyLog[] | null };
 
     setLogs(data ?? []);
     setLoading(false);
@@ -130,9 +131,10 @@ export default function LogHistoryPage() {
     };
   }
 
-  const displayed = filterDate
-    ? logs.filter((l) => l.log_date === filterDate)
-    : logs;
+  const displayed = useMemo(
+    () => filterDate ? logs.filter((l) => l.log_date === filterDate) : logs,
+    [logs, filterDate]
+  );
 
   if (loading) {
     return (

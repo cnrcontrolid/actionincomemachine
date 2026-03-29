@@ -18,12 +18,15 @@ export default async function AdminClientsPage() {
     .select("*")
     .eq("status", "active") as { data: Goal[] | null };
 
-  // Fetch all daily logs grouped by client
+  // Fetch recent logs sorted desc — pre-sorted so no per-client sort needed
   const { data: allLogs } = await supabase
     .from("daily_logs")
-    .select("*") as { data: DailyLog[] | null };
+    .select("*")
+    .order("log_date", { ascending: false })
+    .limit(500) as { data: DailyLog[] | null };
 
   const goalMap = Object.fromEntries((goals ?? []).map((g) => [g.client_id, g]));
+  // allLogs already sorted desc — first entry per client is the most recent
   const logsByClient = (allLogs ?? []).reduce<Record<string, DailyLog[]>>((acc, l) => {
     if (!acc[l.client_id]) acc[l.client_id] = [];
     acc[l.client_id].push(l);
@@ -58,7 +61,7 @@ export default async function AdminClientsPage() {
                 const revenue = getRevenueTotal(logs);
                 const percent = goal ? getProgressPercent(revenue, goal.revenue_target) : 0;
                 const dayNum = goal ? getDayNumber(goal.start_date) : null;
-                const lastLog = logs.sort((a, b) => b.log_date.localeCompare(a.log_date))[0];
+                const lastLog = logs[0]; // already sorted desc by Supabase query
 
                 return (
                   <tr key={client.id} className="border-b border-cream last:border-0 hover:bg-amber-wash/30 transition-colors">

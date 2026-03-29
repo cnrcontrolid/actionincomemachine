@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
 import clsx from "clsx";
 import {
@@ -41,38 +41,30 @@ export default function DailyChecklistCard({ actions, completions, logDate }: Da
     });
   }
 
-  const today = new Date();
+  // Stable date boundaries — computed once per mount (day doesn't change mid-session)
+  const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
+  const weekEnd = useMemo(() => endOfWeek(new Date(), { weekStartsOn: 1 }), []);
+  const monthStart = useMemo(() => startOfMonth(new Date()), []);
+  const monthEnd = useMemo(() => endOfMonth(new Date()), []);
 
-  // Filter helpers
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-  const monthStart = startOfMonth(today);
-  const monthEnd = endOfMonth(today);
-
-  function filterActions(t: Tab): DailyAction[] {
-    if (t === "today") return actions; // all active actions show on "today"
-    if (t === "week") {
+  const filteredActions = useMemo(() => {
+    if (tab === "today") return actions;
+    if (tab === "week") {
       return actions.filter((a) => {
         if (!a.target_date) return false;
-        try {
-          return isWithinInterval(parseISO(a.target_date), { start: weekStart, end: weekEnd });
-        } catch {
-          return false;
-        }
+        try { return isWithinInterval(parseISO(a.target_date), { start: weekStart, end: weekEnd }); }
+        catch { return false; }
       });
     }
-    if (t === "month") {
+    if (tab === "month") {
       return actions.filter((a) => {
         if (!a.target_date) return false;
-        try {
-          return isWithinInterval(parseISO(a.target_date), { start: monthStart, end: monthEnd });
-        } catch {
-          return false;
-        }
+        try { return isWithinInterval(parseISO(a.target_date), { start: monthStart, end: monthEnd }); }
+        catch { return false; }
       });
     }
     return actions;
-  }
+  }, [tab, actions, weekStart, weekEnd, monthStart, monthEnd]);
 
   function groupByGroupName(items: DailyAction[]): Record<string, DailyAction[]> {
     return items.reduce<Record<string, DailyAction[]>>((acc, a) => {
@@ -83,7 +75,6 @@ export default function DailyChecklistCard({ actions, completions, logDate }: Da
     }, {});
   }
 
-  const filteredActions = filterActions(tab);
   const completed = actions.filter((a) => optimistic[a.id]).length;
 
   const tabs: { key: Tab; label: string }[] = [
