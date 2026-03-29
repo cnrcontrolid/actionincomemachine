@@ -20,24 +20,22 @@ export default async function DashboardPage() {
   const cutoff = ninetyDaysAgo.toISOString().slice(0, 10);
 
   // Batch 1: all queries that only need user.id — run in parallel
-  const [
-    { data: goal },
-    { data: targets },
-    { data: completions },
-  ] = await Promise.all([
-    supabase.from("goals").select("*").eq("client_id", user.id).eq("status", "active").single() as Promise<{ data: Goal | null }>,
-    supabase.from("targets").select("*").eq("client_id", user.id) as Promise<{ data: Target[] | null }>,
-    supabase.from("daily_action_completions").select("*").eq("client_id", user.id).eq("log_date", today) as Promise<{ data: DailyActionCompletion[] | null }>,
+  const [goalRes, targetsRes, completionsRes] = await Promise.all([
+    supabase.from("goals").select("*").eq("client_id", user.id).eq("status", "active").single(),
+    supabase.from("targets").select("*").eq("client_id", user.id),
+    supabase.from("daily_action_completions").select("*").eq("client_id", user.id).eq("log_date", today),
   ]);
+  const goal = goalRes.data as Goal | null;
+  const targets = targetsRes.data as Target[] | null;
+  const completions = completionsRes.data as DailyActionCompletion[] | null;
 
   // Batch 2: queries that need goal.id — run in parallel
-  const [
-    { data: allLogs },
-    { data: actions },
-  ] = await Promise.all([
-    supabase.from("daily_logs").select("*").eq("client_id", user.id).eq("goal_id", goal?.id ?? "none").gte("log_date", cutoff).order("log_date", { ascending: false }).limit(90) as Promise<{ data: DailyLog[] | null }>,
-    supabase.from("daily_actions").select("*").eq("client_id", user.id).eq("goal_id", goal?.id ?? "none").eq("is_active", true).order("sort_order") as Promise<{ data: DailyAction[] | null }>,
+  const [logsRes, actionsRes] = await Promise.all([
+    supabase.from("daily_logs").select("*").eq("client_id", user.id).eq("goal_id", goal?.id ?? "none").gte("log_date", cutoff).order("log_date", { ascending: false }).limit(90),
+    supabase.from("daily_actions").select("*").eq("client_id", user.id).eq("goal_id", goal?.id ?? "none").eq("is_active", true).order("sort_order"),
   ]);
+  const allLogs = logsRes.data as DailyLog[] | null;
+  const actions = actionsRes.data as DailyAction[] | null;
 
   // Today's log (allLogs already sorted desc)
   const todayLog = (allLogs ?? []).find((l) => l.log_date === today) ?? null;

@@ -9,15 +9,14 @@ export default async function GoalsPage() {
   if (!user) redirect("/login");
 
   // All three queries only need user.id — run in parallel
-  const [
-    { data: goal },
-    { data: targets },
-    { data: products },
-  ] = await Promise.all([
-    supabase.from("goals").select("*").eq("client_id", user.id).eq("status", "active").single() as Promise<{ data: Goal | null }>,
-    supabase.from("targets").select("*").eq("client_id", user.id).order("sort_order") as Promise<{ data: Target[] | null }>,
-    supabase.from("products").select("*").eq("client_id", user.id).eq("is_active", true).order("tier") as Promise<{ data: Product[] | null }>,
+  const [goalRes, targetsRes, productsRes] = await Promise.all([
+    supabase.from("goals").select("*").eq("client_id", user.id).eq("status", "active").single(),
+    supabase.from("targets").select("*").eq("client_id", user.id).order("sort_order"),
+    supabase.from("products").select("*").eq("client_id", user.id).eq("is_active", true).order("tier"),
   ]);
+  const goal = goalRes.data as Goal | null;
+  const targets = targetsRes.data as Target[] | null;
+  const products = productsRes.data as Product[] | null;
 
   if (!goal) {
     return (

@@ -12,15 +12,14 @@ export default async function ProgressPage() {
   if (!user) redirect("/login");
 
   // All three queries only need user.id — run in parallel
-  const [
-    { data: goal },
-    { data: logs },
-    { data: profile },
-  ] = await Promise.all([
-    supabase.from("goals").select("*").eq("client_id", user.id).eq("status", "active").single() as Promise<{ data: Goal | null }>,
-    supabase.from("daily_logs").select("*").eq("client_id", user.id).order("log_date").limit(90) as Promise<{ data: DailyLog[] | null }>,
-    supabase.from("profiles").select("*").eq("id", user.id).single() as Promise<{ data: Profile | null }>,
+  const [goalRes, logsRes, profileRes] = await Promise.all([
+    supabase.from("goals").select("*").eq("client_id", user.id).eq("status", "active").single(),
+    supabase.from("daily_logs").select("*").eq("client_id", user.id).order("log_date").limit(90),
+    supabase.from("profiles").select("*").eq("id", user.id).single(),
   ]);
+  const goal = goalRes.data as Goal | null;
+  const logs = logsRes.data as DailyLog[] | null;
+  const profile = profileRes.data as Profile | null;
 
   const allLogs = logs ?? [];
   const revenueToDate = getRevenueTotal(allLogs);
