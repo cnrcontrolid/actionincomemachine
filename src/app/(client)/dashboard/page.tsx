@@ -15,70 +15,46 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   const today = format(new Date(), "yyyy-MM-dd");
-
-  // Fetch active goal
-  const { data: goal } = await supabase
-    .from("goals")
-    .select("*")
-    .eq("client_id", user.id)
-    .eq("status", "active")
-    .single() as { data: Goal | null };
-
-  // Fetch daily logs for active goal (capped at 90 — one per day for 90-day program)
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   const cutoff = ninetyDaysAgo.toISOString().slice(0, 10);
 
-  const { data: allLogs } = await supabase
-    .from("daily_logs")
-    .select("*")
-    .eq("client_id", user.id)
-    .eq("goal_id", goal?.id ?? "none")
-    .gte("log_date", cutoff)
-    .order("log_date", { ascending: false })
-    .limit(90) as { data: DailyLog[] | null };
+  // Batch 1: all queries that only need user.id — run in parallel
+  const [
+    { data: goal },
+    { data: targets },
+    { data: completions },
+  ] = await Promise.all([
+    supabase.from("goals").select("*").eq("client_id", user.id).eq("status", "active").single() as Promise<{ data: Goal | null }>,
+    supabase.from("targets").select("*").eq("client_id", user.id) as Promise<{ data: Target[] | null }>,
+    supabase.from("daily_action_completions").select("*").eq("client_id", user.id).eq("log_date", today) as Promise<{ data: DailyActionCompletion[] | null }>,
+  ]);
 
-  // Today's log
+  // Batch 2: queries that need goal.id — run in parallel
+  const [
+    { data: allLogs },
+    { data: actions },
+  ] = await Promise.all([
+    supabase.from("daily_logs").select("*").eq("client_id", user.id).eq("goal_id", goal?.id ?? "none").gte("log_date", cutoff).order("log_date", { ascending: false }).limit(90) as Promise<{ data: DailyLog[] | null }>,
+    supabase.from("daily_actions").select("*").eq("client_id", user.id).eq("goal_id", goal?.id ?? "none").eq("is_active", true).order("sort_order") as Promise<{ data: DailyAction[] | null }>,
+  ]);
+
+  // Today's log (allLogs already sorted desc)
   const todayLog = (allLogs ?? []).find((l) => l.log_date === today) ?? null;
+  const lastLogDate = allLogs?.[0]?.log_date ?? null;
 
-  // Daily actions + today's completions
-  const { data: actions } = await supabase
-    .from("daily_actions")
-    .select("*")
-    .eq("client_id", user.id)
-    .eq("goal_id", goal?.id ?? "none")
-    .eq("is_active", true)
-    .order("sort_order") as { data: DailyAction[] | null };
-
-  const { data: completions } = await supabase
-    .from("daily_action_completions")
-    .select("*")
-    .eq("client_id", user.id)
-    .eq("log_date", today) as { data: DailyActionCompletion[] | null };
-
-  // Targets for trend calculation
-  const { data: targets } = await supabase
-    .from("targets")
-    .select("*")
-    .eq("client_id", user.id) as { data: Target[] | null };
-
-  // Trend condition
+  // Batch 3: trend steps (needs condition computed from logs + targets)
   const revenueToDate = getRevenueTotal(allLogs ?? []);
   const condition = goal
     ? getTrendCondition(goal.revenue_target, goal.start_date, allLogs ?? [], targets ?? [])
     : "on_pace";
 
-  // Trend steps for this condition
   const { data: trendSteps } = await supabase
     .from("trend_steps")
     .select("*")
     .eq("condition", condition)
     .eq("is_active", true)
     .order("sort_order") as { data: TrendStep[] | null };
-
-  // Last log date (most recent)
-  const sortedLogs = [...(allLogs ?? [])].sort((a, b) => b.log_date.localeCompare(a.log_date));
-  const lastLogDate = sortedLogs.length > 0 ? sortedLogs[0].log_date : null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

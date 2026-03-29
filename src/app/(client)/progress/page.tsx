@@ -11,24 +11,16 @@ export default async function ProgressPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: goal } = await supabase
-    .from("goals")
-    .select("*")
-    .eq("client_id", user.id)
-    .eq("status", "active")
-    .single() as { data: Goal | null };
-
-  const { data: logs } = await supabase
-    .from("daily_logs")
-    .select("*")
-    .eq("client_id", user.id)
-    .order("log_date") as { data: DailyLog[] | null };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single() as { data: Profile | null };
+  // All three queries only need user.id — run in parallel
+  const [
+    { data: goal },
+    { data: logs },
+    { data: profile },
+  ] = await Promise.all([
+    supabase.from("goals").select("*").eq("client_id", user.id).eq("status", "active").single() as Promise<{ data: Goal | null }>,
+    supabase.from("daily_logs").select("*").eq("client_id", user.id).order("log_date").limit(90) as Promise<{ data: DailyLog[] | null }>,
+    supabase.from("profiles").select("*").eq("id", user.id).single() as Promise<{ data: Profile | null }>,
+  ]);
 
   const allLogs = logs ?? [];
   const revenueToDate = getRevenueTotal(allLogs);

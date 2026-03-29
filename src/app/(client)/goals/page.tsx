@@ -8,25 +8,16 @@ export default async function GoalsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: goal } = await supabase
-    .from("goals")
-    .select("*")
-    .eq("client_id", user.id)
-    .eq("status", "active")
-    .single() as { data: Goal | null };
-
-  const { data: targets } = await supabase
-    .from("targets")
-    .select("*")
-    .eq("client_id", user.id)
-    .order("sort_order") as { data: Target[] | null };
-
-  const { data: products } = await supabase
-    .from("products")
-    .select("*")
-    .eq("client_id", user.id)
-    .eq("is_active", true)
-    .order("tier") as { data: Product[] | null };
+  // All three queries only need user.id — run in parallel
+  const [
+    { data: goal },
+    { data: targets },
+    { data: products },
+  ] = await Promise.all([
+    supabase.from("goals").select("*").eq("client_id", user.id).eq("status", "active").single() as Promise<{ data: Goal | null }>,
+    supabase.from("targets").select("*").eq("client_id", user.id).order("sort_order") as Promise<{ data: Target[] | null }>,
+    supabase.from("products").select("*").eq("client_id", user.id).eq("is_active", true).order("tier") as Promise<{ data: Product[] | null }>,
+  ]);
 
   if (!goal) {
     return (
