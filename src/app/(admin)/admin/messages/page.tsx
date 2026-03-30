@@ -124,6 +124,9 @@ export default function AdminMessagesPage() {
                     <span className={`text-xs font-medium shrink-0 ${statusColors[msg.status]}`}>{msg.status}</span>
                   </div>
                   <p className="text-xs text-warmgray mt-1">{msg.recipient_phone} · {msg.created_at.split("T")[0]}</p>
+                  {msg.error_detail && (
+                    <p className="text-xs text-red-400 mt-1 bg-red-50 rounded px-2 py-1 break-words">{msg.error_detail}</p>
+                  )}
                 </li>
               ))}
             </ul>
