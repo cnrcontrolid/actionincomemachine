@@ -34,8 +34,8 @@ export default function AdminMessagesPage() {
     if (!message.trim()) return;
 
     const recipients = broadcast
-      ? clients.filter((c) => c.phone).map((c) => ({ phone: c.phone!, client_id: c.id }))
-      : clients.filter((c) => selected.includes(c.id) && c.phone).map((c) => ({ phone: c.phone!, client_id: c.id }));
+      ? clients.filter((c) => c.phone).map((c) => ({ phone: c.phone!, client_id: c.id, client_name: c.full_name ?? c.email }))
+      : clients.filter((c) => selected.includes(c.id) && c.phone).map((c) => ({ phone: c.phone!, client_id: c.id, client_name: c.full_name ?? c.email }));
 
     if (recipients.length === 0) {
       setResult("No recipients with phone numbers selected.");

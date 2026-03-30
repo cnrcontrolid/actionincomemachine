@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { sendWhatsAppText } from "@/lib/whatsapp";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -11,13 +11,14 @@ export async function POST(request: Request) {
   if (profile?.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { recipients, message } = await request.json() as {
-    recipients: { phone: string; client_id?: string }[];
+    recipients: { phone: string; client_id?: string; client_name?: string }[];
     message: string;
   };
 
   const results = await Promise.all(
-    recipients.map(async ({ phone, client_id }) => {
-      const result = await sendWhatsAppText(phone, message);
+    recipients.map(async ({ phone, client_id, client_name }) => {
+      const firstName = (client_name ?? "there").split(" ")[0];
+      const result = await sendWhatsAppTemplate(phone, firstName, message);
 
       // Log to DB
       await supabase.from("whatsapp_messages").insert({
