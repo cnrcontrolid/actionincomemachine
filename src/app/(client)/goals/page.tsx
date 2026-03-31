@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import TargetsList from "@/components/goals/TargetsList";
-import type { Goal, Target, Product } from "@/types";
+import GoalProgressCard from "@/components/dashboard/GoalProgressCard";
+import { getRevenueTotal } from "@/lib/goal-calculations";
+import type { Goal, Target, Product, DailyLog } from "@/types";
 
 const tierLabel: Record<string, string> = {
   low: "Low ticket ($7–$27)",
@@ -17,6 +19,7 @@ export default function GoalsPage() {
   const [goal, setGoal] = useState<Goal | null>(null);
   const [targets, setTargets] = useState<Target[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [logs, setLogs] = useState<DailyLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<GoalTab>("targets");
 
@@ -24,14 +27,16 @@ export default function GoalsPage() {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
-      const [goalRes, targetsRes, productsRes] = await Promise.all([
+      const [goalRes, targetsRes, productsRes, logsRes] = await Promise.all([
         supabase.from("goals").select("*").eq("client_id", user.id).eq("status", "active").single(),
         supabase.from("targets").select("*").eq("client_id", user.id).order("sort_order"),
         supabase.from("products").select("*").eq("client_id", user.id).eq("is_active", true).order("tier"),
+        supabase.from("daily_logs").select("*").eq("client_id", user.id).limit(90),
       ]);
       setGoal(goalRes.data as Goal | null);
       setTargets((targetsRes.data as Target[] | null) ?? []);
       setProducts((productsRes.data as Product[] | null) ?? []);
+      setLogs((logsRes.data as DailyLog[] | null) ?? []);
       setLoading(false);
     });
   }, []);
@@ -54,36 +59,22 @@ export default function GoalsPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <h1 className="font-heading font-bold text-3xl text-charcoal">My Goals</h1>
 
-      {/* Goal Header Card — always visible */}
-      <div className="card space-y-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="font-heading font-bold text-xl text-charcoal">{goal.title}</h2>
-            <p className="text-warmgray text-sm mt-1">{goal.start_date} → {goal.end_date}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-warmgray uppercase tracking-wide font-medium">Revenue Target</p>
-            <p className="font-heading font-bold text-amber-brand text-2xl">${goal.revenue_target.toLocaleString()}</p>
-          </div>
-        </div>
+      <GoalProgressCard goal={goal} revenueToDate={getRevenueTotal(logs)} />
 
-        {goal.notes && (
-          <div className="bg-amber-wash rounded-xl p-4">
-            <p className="text-sm text-charcoal">{goal.notes}</p>
-          </div>
-        )}
-
-        {goal.zoom_link && (
-          <a
-            href={goal.zoom_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-sm text-amber-brand font-medium hover:underline"
-          >
-            Join Zoom session →
+      {goal.zoom_link && (
+        <div className="card py-3 px-5 flex items-center justify-between">
+          <p className="text-sm font-medium text-charcoal">Next coaching session</p>
+          <a href={goal.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#FFAA00] hover:underline">
+            Join Zoom →
           </a>
-        )}
-      </div>
+        </div>
+      )}
+
+      {goal.notes && (
+        <div className="bg-amber-wash rounded-xl px-5 py-4">
+          <p className="text-sm text-charcoal">{goal.notes}</p>
+        </div>
+      )}
 
       {/* Tab Bar */}
       <div className="border-b border-gray-200">

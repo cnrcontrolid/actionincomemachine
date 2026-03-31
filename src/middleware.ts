@@ -55,14 +55,14 @@ export async function middleware(request: NextRequest) {
 
   if (user && (pathname === "/login" || pathname === "/register")) {
     const url = request.nextUrl.clone();
-    url.pathname = profileRole === "admin" ? "/admin/clients" : "/dashboard";
+    url.pathname = profileRole === "admin" ? "/admin/clients" : "/goals";
     return NextResponse.redirect(url);
   }
 
   // Admin-only routes
   if (pathname.startsWith("/admin") && profileRole !== "admin") {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/goals";
     return NextResponse.redirect(url);
   }
 

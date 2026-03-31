@@ -48,6 +48,16 @@ export default function IncomePage() {
   // Delete confirm
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Follower counts
+  const [followers, setFollowers] = useState({
+    instagram_followers: "",
+    youtube_subscribers: "",
+    facebook_friends: "",
+    linkedin_connections: "",
+  });
+  const [followerSaving, setFollowerSaving] = useState(false);
+  const [followerSaved, setFollowerSaved] = useState(false);
+
   const fetchLogs = useCallback(async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -69,6 +79,17 @@ export default function IncomePage() {
       .limit(90) as { data: DailyLog[] | null };
 
     setLogs(data ?? []);
+
+    const { data: profile } = await supabase.from("profiles").select("instagram_followers,youtube_subscribers,facebook_friends,linkedin_connections").eq("id", user.id).single();
+    if (profile) {
+      setFollowers({
+        instagram_followers: (profile.instagram_followers ?? 0).toString(),
+        youtube_subscribers: (profile.youtube_subscribers ?? 0).toString(),
+        facebook_friends: (profile.facebook_friends ?? 0).toString(),
+        linkedin_connections: (profile.linkedin_connections ?? 0).toString(),
+      });
+    }
+
     setLoading(false);
   }, []);
 
@@ -141,6 +162,26 @@ export default function IncomePage() {
     await fetch(`/api/daily-log/${logId}`, { method: "DELETE" });
     setDeletingId(null);
     setLogs((prev) => prev.filter((l) => l.id !== logId));
+  }
+
+  // ── Follower counts save ──────────────────────────────────────────────────
+
+  async function saveFollowers(e: React.FormEvent) {
+    e.preventDefault();
+    setFollowerSaving(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("profiles").update({
+        instagram_followers: parseInt(followers.instagram_followers) || 0,
+        youtube_subscribers: parseInt(followers.youtube_subscribers) || 0,
+        facebook_friends: parseInt(followers.facebook_friends) || 0,
+        linkedin_connections: parseInt(followers.linkedin_connections) || 0,
+      }).eq("id", user.id);
+    }
+    setFollowerSaving(false);
+    setFollowerSaved(true);
+    setTimeout(() => setFollowerSaved(false), 2500);
   }
 
   // ── Edit field helper ─────────────────────────────────────────────────────
@@ -224,6 +265,39 @@ export default function IncomePage() {
           </div>
         </form>
         {!goalId && <p className="text-xs text-warmgray">No active goal — logging disabled until your coach sets your goal.</p>}
+      </div>
+
+      {/* ── Follower Counts ─────────────────────────────────────────────── */}
+      <div className="card space-y-4">
+        <h2 className="font-heading font-bold text-charcoal text-lg">Update Follower Counts</h2>
+        <form onSubmit={saveFollowers}>
+          <div className="flex flex-wrap gap-3 items-end">
+            {[
+              { key: "instagram_followers", label: "Instagram Followers" },
+              { key: "youtube_subscribers", label: "YouTube Subscribers" },
+              { key: "facebook_friends", label: "Facebook Friends" },
+              { key: "linkedin_connections", label: "LinkedIn Connections" },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex flex-col gap-1 min-w-[140px] flex-1">
+                <label className="text-xs font-medium text-gray-600">{label}</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={followers[key as keyof typeof followers]}
+                  onChange={(e) => setFollowers((p) => ({ ...p, [key]: e.target.value }))}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#FFAA00]"
+                />
+              </div>
+            ))}
+            <button
+              type="submit"
+              disabled={followerSaving}
+              className="flex items-center gap-1.5 bg-[#FFAA00] hover:bg-[#e69900] text-black text-sm font-semibold px-5 py-2 rounded-xl transition-colors disabled:opacity-60 self-end"
+            >
+              {followerSaving ? "Saving…" : followerSaved ? "Saved!" : "Save"}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* ── Log History Table ─────────────────────────────────────────────── */}

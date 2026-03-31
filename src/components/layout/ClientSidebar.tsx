@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
   Target,
   TrendingUp,
   BookOpen,
@@ -16,7 +15,6 @@ import clsx from "clsx";
 import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/goals", label: "My Goals", icon: Target },
   { href: "/actions", label: "Actions", icon: CheckSquare },
   { href: "/income", label: "Income", icon: DollarSign },

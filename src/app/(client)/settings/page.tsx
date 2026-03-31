@@ -12,10 +12,6 @@ export default function SettingsPage() {
     facebook_profile: "",
     linkedin_profile: "",
     youtube_channel: "",
-    instagram_followers: "",
-    youtube_subscribers: "",
-    facebook_friends: "",
-    linkedin_connections: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,7 +32,7 @@ export default function SettingsPage() {
       const { data } = await supabase
         .from("profiles")
         .select(
-          "full_name, phone, whatsapp_opt_in, instagram_handle, facebook_profile, linkedin_profile, youtube_channel, instagram_followers, youtube_subscribers, facebook_friends, linkedin_connections"
+          "full_name, phone, whatsapp_opt_in, instagram_handle, facebook_profile, linkedin_profile, youtube_channel"
         )
         .eq("id", user.id)
         .single();
@@ -49,10 +45,6 @@ export default function SettingsPage() {
           facebook_profile: data.facebook_profile ?? "",
           linkedin_profile: data.linkedin_profile ?? "",
           youtube_channel: data.youtube_channel ?? "",
-          instagram_followers: data.instagram_followers?.toString() ?? "",
-          youtube_subscribers: data.youtube_subscribers?.toString() ?? "",
-          facebook_friends: data.facebook_friends?.toString() ?? "",
-          linkedin_connections: data.linkedin_connections?.toString() ?? "",
         });
       }
       setLoading(false);
@@ -73,10 +65,6 @@ export default function SettingsPage() {
         facebook_profile: form.facebook_profile || null,
         linkedin_profile: form.linkedin_profile || null,
         youtube_channel: form.youtube_channel || null,
-        instagram_followers: parseInt(form.instagram_followers) || 0,
-        youtube_subscribers: parseInt(form.youtube_subscribers) || 0,
-        facebook_friends: parseInt(form.facebook_friends) || 0,
-        linkedin_connections: parseInt(form.linkedin_connections) || 0,
       }).eq("id", user.id);
     }
     setSaving(false);
@@ -264,52 +252,6 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Follower Counts */}
-            <div className="card space-y-4">
-              <h2 className="font-heading font-bold text-charcoal">Follower Counts</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label text-xs">Instagram Followers</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className="input"
-                    value={form.instagram_followers}
-                    onChange={(e) => setForm((p) => ({ ...p, instagram_followers: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="label text-xs">YouTube Subscribers</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className="input"
-                    value={form.youtube_subscribers}
-                    onChange={(e) => setForm((p) => ({ ...p, youtube_subscribers: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="label text-xs">Facebook Friends</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className="input"
-                    value={form.facebook_friends}
-                    onChange={(e) => setForm((p) => ({ ...p, facebook_friends: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="label text-xs">LinkedIn Connections</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className="input"
-                    value={form.linkedin_connections}
-                    onChange={(e) => setForm((p) => ({ ...p, linkedin_connections: e.target.value }))}
-                  />
-                </div>
-              </div>
-            </div>
 
           </div>
         </div>
