@@ -38,6 +38,10 @@ export async function PATCH(
     expenses,
     posts_count,
     sales_calls_count,
+    instagram_followers,
+    youtube_subscribers,
+    facebook_friends,
+    linkedin_connections,
     notes,
   } = body;
 
@@ -48,6 +52,10 @@ export async function PATCH(
   if (expenses !== undefined) updates.expenses = expenses;
   if (posts_count !== undefined) updates.posts_count = posts_count;
   if (sales_calls_count !== undefined) updates.sales_calls_count = sales_calls_count;
+  if (instagram_followers !== undefined) updates.instagram_followers = instagram_followers;
+  if (youtube_subscribers !== undefined) updates.youtube_subscribers = youtube_subscribers;
+  if (facebook_friends !== undefined) updates.facebook_friends = facebook_friends;
+  if (linkedin_connections !== undefined) updates.linkedin_connections = linkedin_connections;
   if (notes !== undefined) updates.notes = notes;
 
   const { data, error } = await supabase

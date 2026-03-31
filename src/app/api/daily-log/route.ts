@@ -44,6 +44,10 @@ export async function POST(request: Request) {
     posts_count = 0,
     emails_count = 0,
     sales_calls_count,
+    instagram_followers = 0,
+    youtube_subscribers = 0,
+    facebook_friends = 0,
+    linkedin_connections = 0,
     notes = "",
   } = body;
 
@@ -60,6 +64,10 @@ export async function POST(request: Request) {
         ...(income_total !== undefined && { income_total }),
         ...(money_in_bank !== undefined && { money_in_bank }),
         ...(sales_calls_count !== undefined && { sales_calls_count }),
+        instagram_followers,
+        youtube_subscribers,
+        facebook_friends,
+        linkedin_connections,
         expenses,
         posts_count,
         emails_count,

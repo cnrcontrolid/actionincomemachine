@@ -16,6 +16,10 @@ interface LogForm {
   money_in_bank: string;
   posts_count: string;
   sales_calls_count: string;
+  instagram_followers: string;
+  youtube_subscribers: string;
+  facebook_friends: string;
+  linkedin_connections: string;
   notes: string;
 }
 
@@ -25,6 +29,10 @@ const defaultForm: LogForm = {
   money_in_bank: "0",
   posts_count: "0",
   sales_calls_count: "0",
+  instagram_followers: "0",
+  youtube_subscribers: "0",
+  facebook_friends: "0",
+  linkedin_connections: "0",
   notes: "",
 };
 
@@ -48,16 +56,6 @@ export default function IncomePage() {
   // Delete confirm
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Follower counts
-  const [followers, setFollowers] = useState({
-    instagram_followers: "",
-    youtube_subscribers: "",
-    facebook_friends: "",
-    linkedin_connections: "",
-  });
-  const [followerSaving, setFollowerSaving] = useState(false);
-  const [followerSaved, setFollowerSaved] = useState(false);
-
   const fetchLogs = useCallback(async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -79,23 +77,12 @@ export default function IncomePage() {
       .limit(90) as { data: DailyLog[] | null };
 
     setLogs(data ?? []);
-
-    const { data: profile } = await supabase.from("profiles").select("instagram_followers,youtube_subscribers,facebook_friends,linkedin_connections").eq("id", user.id).single();
-    if (profile) {
-      setFollowers({
-        instagram_followers: (profile.instagram_followers ?? 0).toString(),
-        youtube_subscribers: (profile.youtube_subscribers ?? 0).toString(),
-        facebook_friends: (profile.facebook_friends ?? 0).toString(),
-        linkedin_connections: (profile.linkedin_connections ?? 0).toString(),
-      });
-    }
-
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
-  // ── Quick log (top form) ──────────────────────────────────────────────────
+  // ── Quick log ────────────────────────────────────────────────────────────
 
   async function saveQuickLog(e: React.FormEvent) {
     e.preventDefault();
@@ -112,6 +99,10 @@ export default function IncomePage() {
         money_in_bank: parseFloat(quickForm.money_in_bank) || 0,
         posts_count: parseInt(quickForm.posts_count) || 0,
         sales_calls_count: parseInt(quickForm.sales_calls_count) || 0,
+        instagram_followers: parseInt(quickForm.instagram_followers) || 0,
+        youtube_subscribers: parseInt(quickForm.youtube_subscribers) || 0,
+        facebook_friends: parseInt(quickForm.facebook_friends) || 0,
+        linkedin_connections: parseInt(quickForm.linkedin_connections) || 0,
         notes: quickForm.notes,
       }),
     });
@@ -122,7 +113,7 @@ export default function IncomePage() {
     fetchLogs();
   }
 
-  // ── Inline edit ───────────────────────────────────────────────────────────
+  // ── Inline edit ──────────────────────────────────────────────────────────
 
   function startEdit(log: DailyLog) {
     setEditingId(log.id);
@@ -132,6 +123,10 @@ export default function IncomePage() {
       money_in_bank: (log.money_in_bank ?? 0).toString(),
       posts_count: (log.posts_count ?? 0).toString(),
       sales_calls_count: (log.sales_calls_count ?? 0).toString(),
+      instagram_followers: (log.instagram_followers ?? 0).toString(),
+      youtube_subscribers: (log.youtube_subscribers ?? 0).toString(),
+      facebook_friends: (log.facebook_friends ?? 0).toString(),
+      linkedin_connections: (log.linkedin_connections ?? 0).toString(),
       notes: log.notes ?? "",
     });
   }
@@ -147,6 +142,10 @@ export default function IncomePage() {
         money_in_bank: parseFloat(editForm.money_in_bank) || 0,
         posts_count: parseInt(editForm.posts_count) || 0,
         sales_calls_count: parseInt(editForm.sales_calls_count) || 0,
+        instagram_followers: parseInt(editForm.instagram_followers) || 0,
+        youtube_subscribers: parseInt(editForm.youtube_subscribers) || 0,
+        facebook_friends: parseInt(editForm.facebook_friends) || 0,
+        linkedin_connections: parseInt(editForm.linkedin_connections) || 0,
         notes: editForm.notes,
       }),
     });
@@ -155,7 +154,7 @@ export default function IncomePage() {
     fetchLogs();
   }
 
-  // ── Delete ────────────────────────────────────────────────────────────────
+  // ── Delete ───────────────────────────────────────────────────────────────
 
   async function deleteLog(logId: string) {
     setDeletingId(logId);
@@ -164,34 +163,16 @@ export default function IncomePage() {
     setLogs((prev) => prev.filter((l) => l.id !== logId));
   }
 
-  // ── Follower counts save ──────────────────────────────────────────────────
+  // ── Edit input helper ────────────────────────────────────────────────────
 
-  async function saveFollowers(e: React.FormEvent) {
-    e.preventDefault();
-    setFollowerSaving(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("profiles").update({
-        instagram_followers: parseInt(followers.instagram_followers) || 0,
-        youtube_subscribers: parseInt(followers.youtube_subscribers) || 0,
-        facebook_friends: parseInt(followers.facebook_friends) || 0,
-        linkedin_connections: parseInt(followers.linkedin_connections) || 0,
-      }).eq("id", user.id);
-    }
-    setFollowerSaving(false);
-    setFollowerSaved(true);
-    setTimeout(() => setFollowerSaved(false), 2500);
-  }
-
-  // ── Edit field helper ─────────────────────────────────────────────────────
-
-  function ef(key: keyof LogForm) {
+  function ei(key: keyof LogForm, type: "number" | "text" = "number") {
     return {
       value: editForm[key],
-      onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
         setEditForm((p) => ({ ...p, [key]: e.target.value })),
-      className: "w-full border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#FFAA00]",
+      className: "w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#FFAA00]",
+      type,
+      ...(type === "number" ? { min: "0" } : {}),
     };
   }
 
@@ -211,8 +192,8 @@ export default function IncomePage() {
       {/* ── Log Your Numbers ─────────────────────────────────────────────── */}
       <div className="card space-y-4">
         <h2 className="font-heading font-bold text-charcoal text-lg">Log Your Numbers</h2>
-        <form onSubmit={saveQuickLog}>
-          {/* Horizontal fields row */}
+        <form onSubmit={saveQuickLog} className="space-y-3">
+          {/* Row 1 — income / activity */}
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex flex-col gap-1 min-w-[110px]">
               <label className="text-xs font-medium text-gray-600">Date</label>
@@ -225,53 +206,28 @@ export default function IncomePage() {
               />
             </div>
             {[
-              { key: "income_total", label: "Income ($)", type: "number" },
-              { key: "expenses", label: "Expenses ($)", type: "number" },
-              { key: "money_in_bank", label: "Money in Bank ($)", type: "number" },
-              { key: "posts_count", label: "Posts", type: "number" },
-              { key: "sales_calls_count", label: "Sales Calls", type: "number" },
-            ].map(({ key, label }) => (
+              { key: "income_total", label: "Income ($)", step: "0.01" },
+              { key: "expenses", label: "Expenses ($)", step: "0.01" },
+              { key: "money_in_bank", label: "Money in Bank ($)", step: "0.01" },
+              { key: "posts_count", label: "Posts", step: "1" },
+              { key: "sales_calls_count", label: "Sales Calls", step: "1" },
+            ].map(({ key, label, step }) => (
               <div key={key} className="flex flex-col gap-1 min-w-[100px] flex-1">
                 <label className="text-xs font-medium text-gray-600">{label}</label>
                 <input
                   type="number"
                   min="0"
-                  step={key === "income_total" || key === "expenses" || key === "money_in_bank" ? "0.01" : "1"}
+                  step={step}
                   value={quickForm[key as keyof LogForm]}
                   onChange={(e) => setQuickForm((p) => ({ ...p, [key]: e.target.value }))}
                   className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#FFAA00]"
                 />
               </div>
             ))}
-            <button
-              type="submit"
-              disabled={quickSaving || !goalId}
-              className="flex items-center gap-1.5 bg-[#FFAA00] hover:bg-[#e69900] text-black text-sm font-semibold px-5 py-2 rounded-xl transition-colors disabled:opacity-60 self-end"
-            >
-              {quickSaving ? "Saving…" : quickSaved ? "Saved!" : "Save"}
-            </button>
           </div>
 
-          {/* Notes spans full width below */}
-          <div className="mt-3">
-            <label className="text-xs font-medium text-gray-600 block mb-1">Notes (optional)</label>
-            <textarea
-              value={quickForm.notes}
-              onChange={(e) => setQuickForm((p) => ({ ...p, notes: e.target.value }))}
-              placeholder="Optional notes for today…"
-              rows={2}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#FFAA00]"
-            />
-          </div>
-        </form>
-        {!goalId && <p className="text-xs text-warmgray">No active goal — logging disabled until your coach sets your goal.</p>}
-      </div>
-
-      {/* ── Follower Counts ─────────────────────────────────────────────── */}
-      <div className="card space-y-4">
-        <h2 className="font-heading font-bold text-charcoal text-lg">Update Follower Counts</h2>
-        <form onSubmit={saveFollowers}>
-          <div className="flex flex-wrap gap-3 items-end">
+          {/* Row 2 — follower counts */}
+          <div className="flex flex-wrap gap-3 items-end border-t border-gray-100 pt-3">
             {[
               { key: "instagram_followers", label: "Instagram Followers" },
               { key: "youtube_subscribers", label: "YouTube Subscribers" },
@@ -283,27 +239,43 @@ export default function IncomePage() {
                 <input
                   type="number"
                   min="0"
-                  value={followers[key as keyof typeof followers]}
-                  onChange={(e) => setFollowers((p) => ({ ...p, [key]: e.target.value }))}
+                  step="1"
+                  value={quickForm[key as keyof LogForm]}
+                  onChange={(e) => setQuickForm((p) => ({ ...p, [key]: e.target.value }))}
                   className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#FFAA00]"
                 />
               </div>
             ))}
+          </div>
+
+          {/* Notes + Save */}
+          <div className="flex gap-3 items-end border-t border-gray-100 pt-3">
+            <div className="flex-1">
+              <label className="text-xs font-medium text-gray-600 block mb-1">Notes (optional)</label>
+              <textarea
+                value={quickForm.notes}
+                onChange={(e) => setQuickForm((p) => ({ ...p, notes: e.target.value }))}
+                placeholder="Optional notes for today…"
+                rows={2}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#FFAA00] resize-y"
+              />
+            </div>
             <button
               type="submit"
-              disabled={followerSaving}
-              className="flex items-center gap-1.5 bg-[#FFAA00] hover:bg-[#e69900] text-black text-sm font-semibold px-5 py-2 rounded-xl transition-colors disabled:opacity-60 self-end"
+              disabled={quickSaving || !goalId}
+              className="flex items-center gap-1.5 bg-[#FFAA00] hover:bg-[#e69900] text-black text-sm font-semibold px-5 py-2 rounded-xl transition-colors disabled:opacity-60 self-end mb-0.5"
             >
-              {followerSaving ? "Saving…" : followerSaved ? "Saved!" : "Save"}
+              {quickSaving ? "Saving…" : quickSaved ? "Saved!" : "Save"}
             </button>
           </div>
         </form>
+        {!goalId && <p className="text-xs text-warmgray">No active goal — logging disabled until your coach sets your goal.</p>}
       </div>
 
       {/* ── Log History Table ─────────────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-          <h2 className="font-heading font-bold text-xl text-charcoal">Income History</h2>
+          <h2 className="font-heading font-bold text-xl text-charcoal">Log History</h2>
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-gray-500">Filter by date</label>
             <input
@@ -314,9 +286,7 @@ export default function IncomePage() {
               className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#FFAA00]"
             />
             {filterDate && (
-              <button onClick={() => setFilterDate("")} className="text-xs text-gray-400 hover:text-gray-600">
-                Clear
-              </button>
+              <button onClick={() => setFilterDate("")} className="text-xs text-gray-400 hover:text-gray-600">Clear</button>
             )}
           </div>
         </div>
@@ -332,8 +302,20 @@ export default function IncomePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {["Date", "Income", "Expenses", "Money in Bank", "Posts", "Sales Calls", "Notes", ""].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  {[
+                    { label: "Date", title: "Date" },
+                    { label: "Income", title: "Income" },
+                    { label: "Exp.", title: "Expenses" },
+                    { label: "Bank", title: "Money in Bank" },
+                    { label: "Posts", title: "Posts" },
+                    { label: "Calls", title: "Sales Calls" },
+                    { label: "IG", title: "Instagram Followers" },
+                    { label: "YT", title: "YouTube Subscribers" },
+                    { label: "FB", title: "Facebook Friends" },
+                    { label: "LI", title: "LinkedIn Connections" },
+                    { label: "", title: "" },
+                  ].map((h, i) => (
+                    <th key={i} title={h.title} className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h.label}</th>
                   ))}
                 </tr>
               </thead>
@@ -343,47 +325,63 @@ export default function IncomePage() {
                   const isDeleting = deletingId === log.id;
                   return (
                     <tr key={log.id} className={isEditing ? "bg-amber-50" : "hover:bg-gray-50/50 transition-colors"}>
-                      <td className="px-4 py-3 font-medium text-charcoal whitespace-nowrap">
-                        {format(new Date(log.log_date + "T00:00:00"), "dd MMM yyyy")}
+                      <td className="px-3 py-3 font-medium text-charcoal whitespace-nowrap text-xs">
+                        {format(new Date(log.log_date + "T00:00:00"), "dd MMM yy")}
                       </td>
                       {isEditing ? (
                         <>
-                          <td className="px-2 py-2"><input type="number" min="0" step="0.01" {...ef("income_total")} /></td>
-                          <td className="px-2 py-2"><input type="number" min="0" step="0.01" {...ef("expenses")} /></td>
-                          <td className="px-2 py-2"><input type="number" min="0" step="0.01" {...ef("money_in_bank")} /></td>
-                          <td className="px-2 py-2"><input type="number" min="0" {...ef("posts_count")} /></td>
-                          <td className="px-2 py-2"><input type="number" min="0" {...ef("sales_calls_count")} /></td>
-                          <td className="px-2 py-2"><input type="text" value={editForm.notes} onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#FFAA00]" placeholder="Notes…" /></td>
+                          <td className="px-2 py-2"><input {...ei("income_total")} step="0.01" /></td>
+                          <td className="px-2 py-2"><input {...ei("expenses")} step="0.01" /></td>
+                          <td className="px-2 py-2"><input {...ei("money_in_bank")} step="0.01" /></td>
+                          <td className="px-2 py-2"><input {...ei("posts_count")} /></td>
+                          <td className="px-2 py-2"><input {...ei("sales_calls_count")} /></td>
+                          <td className="px-2 py-2"><input {...ei("instagram_followers")} /></td>
+                          <td className="px-2 py-2"><input {...ei("youtube_subscribers")} /></td>
+                          <td className="px-2 py-2"><input {...ei("facebook_friends")} /></td>
+                          <td className="px-2 py-2 min-w-[180px]">
+                            <div className="space-y-1">
+                              <input {...ei("linkedin_connections")} />
+                              <textarea
+                                value={editForm.notes}
+                                onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))}
+                                placeholder="Notes…"
+                                rows={2}
+                                className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#FFAA00] resize-y"
+                              />
+                            </div>
+                          </td>
                           <td className="px-2 py-2 whitespace-nowrap">
                             <div className="flex gap-1">
-                              <button onClick={() => saveEdit(log.id)} disabled={editSaving} className="bg-[#FFAA00] text-black text-xs font-semibold px-2 py-1 rounded-lg hover:bg-[#e69900] disabled:opacity-60">
-                                <Check size={13} />
+                              <button onClick={() => saveEdit(log.id)} disabled={editSaving} className="bg-[#FFAA00] text-black text-xs font-semibold p-1.5 rounded-lg hover:bg-[#e69900] disabled:opacity-60">
+                                <Check size={12} />
                               </button>
-                              <button onClick={() => setEditingId(null)} className="border border-gray-200 text-gray-500 text-xs px-2 py-1 rounded-lg hover:bg-gray-100">
-                                <X size={13} />
+                              <button onClick={() => setEditingId(null)} className="border border-gray-200 text-gray-500 text-xs p-1.5 rounded-lg hover:bg-gray-100">
+                                <X size={12} />
                               </button>
                             </div>
                           </td>
                         </>
                       ) : (
                         <>
-                          <td className="px-4 py-3 text-[#30B33C] font-semibold">${(log.income_total ?? 0).toLocaleString()}</td>
-                          <td className="px-4 py-3 text-red-500">${(log.expenses ?? 0).toLocaleString()}</td>
-                          <td className="px-4 py-3 text-charcoal">${(log.money_in_bank ?? 0).toLocaleString()}</td>
-                          <td className="px-4 py-3 text-charcoal">{log.posts_count ?? 0}</td>
-                          <td className="px-4 py-3 text-charcoal">{log.sales_calls_count ?? 0}</td>
-                          <td className="px-4 py-3 text-warmgray max-w-xs truncate">{log.notes ?? "—"}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 text-[#30B33C] font-semibold text-xs">${(log.income_total ?? 0).toLocaleString()}</td>
+                          <td className="px-3 py-3 text-red-500 text-xs">${(log.expenses ?? 0).toLocaleString()}</td>
+                          <td className="px-3 py-3 text-charcoal text-xs">${(log.money_in_bank ?? 0).toLocaleString()}</td>
+                          <td className="px-3 py-3 text-charcoal text-xs">{log.posts_count ?? 0}</td>
+                          <td className="px-3 py-3 text-charcoal text-xs">{log.sales_calls_count ?? 0}</td>
+                          <td className="px-3 py-3 text-charcoal text-xs">{(log.instagram_followers ?? 0).toLocaleString()}</td>
+                          <td className="px-3 py-3 text-charcoal text-xs">{(log.youtube_subscribers ?? 0).toLocaleString()}</td>
+                          <td className="px-3 py-3 text-charcoal text-xs">{(log.facebook_friends ?? 0).toLocaleString()}</td>
+                          <td className="px-3 py-3 text-charcoal text-xs">{(log.linkedin_connections ?? 0).toLocaleString()}</td>
+                          <td className="px-3 py-3">
                             <div className="flex items-center gap-2">
-                              <button onClick={() => startEdit(log)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#FFAA00] transition-colors">
+                              <button onClick={() => startEdit(log)} className="text-gray-400 hover:text-[#FFAA00] transition-colors" title="Edit">
                                 <Pencil size={13} />
                               </button>
                               <button
-                                onClick={() => {
-                                  if (window.confirm("Delete this log entry?")) deleteLog(log.id);
-                                }}
+                                onClick={() => { if (window.confirm("Delete this log entry?")) deleteLog(log.id); }}
                                 disabled={isDeleting}
-                                className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40"
+                                className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40"
+                                title="Delete"
                               >
                                 <Trash2 size={13} />
                               </button>

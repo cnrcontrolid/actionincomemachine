@@ -93,6 +93,10 @@ export interface DailyLog {
   expenses: number;
   posts_count: number;
   sales_calls_count: number;
+  instagram_followers: number;
+  youtube_subscribers: number;
+  facebook_friends: number;
+  linkedin_connections: number;
   emails_count: number;
   notes: string | null;
   created_at: string;
