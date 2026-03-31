@@ -39,32 +39,31 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && (pathname === "/login" || pathname === "/register")) {
-    // Redirect already-logged-in users
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    const url = request.nextUrl.clone();
-    url.pathname = profile?.role === "admin" ? "/admin/clients" : "/dashboard";
-    return NextResponse.redirect(url);
-  }
-
-  // Admin-only routes
-  if (pathname.startsWith("/admin")) {
+  // Fetch role once for any path that needs it
+  const needsRole = user && (
+    pathname === "/login" || pathname === "/register" || pathname.startsWith("/admin")
+  );
+  let profileRole: string | null = null;
+  if (needsRole) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user!.id)
       .single();
+    profileRole = profile?.role ?? null;
+  }
 
-    if (profile?.role !== "admin") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
-      return NextResponse.redirect(url);
-    }
+  if (user && (pathname === "/login" || pathname === "/register")) {
+    const url = request.nextUrl.clone();
+    url.pathname = profileRole === "admin" ? "/admin/clients" : "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  // Admin-only routes
+  if (pathname.startsWith("/admin") && profileRole !== "admin") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;

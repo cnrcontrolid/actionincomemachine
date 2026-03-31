@@ -7,7 +7,8 @@ import {
   Target,
   TrendingUp,
   BookOpen,
-  ClipboardList,
+  CheckSquare,
+  DollarSign,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -17,9 +18,10 @@ import { createClient } from "@/lib/supabase/client";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/goals", label: "My Goals", icon: Target },
+  { href: "/actions", label: "Actions", icon: CheckSquare },
+  { href: "/income", label: "Income", icon: DollarSign },
   { href: "/progress", label: "Progress", icon: TrendingUp },
   { href: "/resources", label: "Resources", icon: BookOpen },
-  { href: "/log-history", label: "Log History", icon: ClipboardList },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

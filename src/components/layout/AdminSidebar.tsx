@@ -10,6 +10,7 @@ import {
   BookOpen,
   LogOut,
   LayoutDashboard,
+  FolderOpen,
 } from "lucide-react";
 import clsx from "clsx";
 import { createClient } from "@/lib/supabase/client";
@@ -19,6 +20,7 @@ const navItems = [
   { href: "/admin/clients", label: "Clients", icon: Users },
   { href: "/admin/messages", label: "WhatsApp", icon: MessageSquare },
   { href: "/admin/emails", label: "Email Sequences", icon: Mail },
+  { href: "/admin/resources", label: "Resources", icon: FolderOpen },
   { href: "/admin/content/trend-steps", label: "Trend Steps", icon: Lightbulb },
   { href: "/admin/content/knowledge-base", label: "Knowledge Base", icon: BookOpen },
 ];

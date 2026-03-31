@@ -1,7 +1,8 @@
 import { Resend } from "resend";
 
 function getResend() {
-  return new Resend(process.env.RESEND_API_KEY ?? "placeholder");
+  if (!process.env.RESEND_API_KEY) throw new Error("RESEND_API_KEY is not set");
+  return new Resend(process.env.RESEND_API_KEY);
 }
 
 const LOGO_URL = "https://app.actionincomemachine.com/logo.png";

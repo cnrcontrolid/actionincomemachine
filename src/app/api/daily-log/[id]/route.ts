@@ -63,3 +63,28 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true, data });
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = params;
+
+  const { data: existingLog, error: fetchError } = await supabase
+    .from("daily_logs")
+    .select("id, client_id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !existingLog) return NextResponse.json({ error: "Log not found" }, { status: 404 });
+  if (existingLog.client_id !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { error } = await supabase.from("daily_logs").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true });
+}

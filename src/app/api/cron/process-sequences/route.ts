@@ -1,17 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/resend";
 import { replaceTokens } from "@/lib/email-tokens";
 import { getDayNumber, getDaysRemaining, getRevenueTotal } from "@/lib/goal-calculations";
 import { NextResponse } from "next/server";
 import type { DailyLog } from "@/types";
-
-// Uses service role key — bypasses RLS for scheduled processing
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 export async function GET(request: Request) {
   // Protect the cron endpoint
@@ -20,7 +12,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = getServiceClient();
+  const supabase = createAdminClient();
   const today = new Date().toISOString().split("T")[0];
 
   // Fetch all pending assignments with sequence + goal + client data
@@ -32,7 +24,8 @@ export async function GET(request: Request) {
       goals (*),
       profiles:client_id (*)
     `)
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .limit(50);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

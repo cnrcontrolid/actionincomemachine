@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/resend";
 import { replaceTokens } from "@/lib/email-tokens";
+import { getRevenueTotal, getDayNumber, getDaysRemaining } from "@/lib/goal-calculations";
 import { NextResponse } from "next/server";
+import type { DailyLog } from "@/types";
 
 export async function PATCH(
   request: Request,
@@ -11,7 +13,8 @@ export async function PATCH(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { is_met } = await request.json();
+  const { is_met: rawIsMet } = await request.json();
+  const is_met = Boolean(rawIsMet);
 
   const { data: target, error } = await supabase
     .from("targets")
@@ -24,7 +27,7 @@ export async function PATCH(
 
   // Fire goal_milestone email sequences immediately if target was met
   if (is_met && target) {
-    const goal = target.goals as { id: string; start_date: string; revenue_target: number; title: string };
+    const goal = target.goals as { id: string; start_date: string; end_date: string; revenue_target: number; title: string };
     const clientProfile = target.profiles as { id: string; full_name: string | null; email: string };
 
     const { data: assignments } = await supabase
@@ -45,9 +48,9 @@ export async function PATCH(
         .eq("client_id", clientProfile.id)
         .eq("goal_id", goal.id);
 
-      const revenueToDate = (logs ?? []).reduce(
-        (s: number, l: { income_low: number; income_mid: number; income_high: number }) => s + l.income_low + l.income_mid + l.income_high, 0
-      );
+      const revenueToDate = getRevenueTotal((logs ?? []) as DailyLog[]);
+      const dayNum = getDayNumber(goal.start_date);
+      const daysRemaining = getDaysRemaining(goal.end_date);
 
       const html = replaceTokens(seq.html_body, {
         client_name: clientProfile.full_name ?? clientProfile.email,
@@ -55,10 +58,8 @@ export async function PATCH(
         revenue_to_date: `$${revenueToDate.toLocaleString()}`,
         revenue_target: `$${goal.revenue_target.toLocaleString()}`,
         percent_complete: `${Math.round((revenueToDate / goal.revenue_target) * 100)}%`,
-        day_number: String(
-          Math.max(1, Math.ceil((Date.now() - new Date(goal.start_date).getTime()) / 86400000) + 1)
-        ),
-        days_remaining: "—",
+        day_number: String(dayNum),
+        days_remaining: String(daysRemaining),
       });
 
       await sendEmail({

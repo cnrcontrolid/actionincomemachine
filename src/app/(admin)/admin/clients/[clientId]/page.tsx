@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronDown as CollapseIcon,
+  Pencil,
 } from "lucide-react";
 import {
   getRevenueTotal,
@@ -41,6 +42,7 @@ interface TargetInput {
   title: string;
   description: string;
   due_date: string;
+  interval: "none" | "daily" | "weekly" | "monthly";
 }
 
 interface ProductRow {
@@ -394,6 +396,7 @@ function SetGoalPanel({
   onSaved: () => void;
 }) {
   const [saving, setSaving] = useState(false);
+  const [clientProducts, setClientProducts] = useState<Product[]>([]);
   const [form, setForm] = useState({
     title: "",
     start_date: "",
@@ -407,10 +410,20 @@ function SetGoalPanel({
   });
   const [targets, setTargets] = useState<TargetInput[]>([]);
 
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("products")
+      .select("id, name, price, tier, currency")
+      .eq("client_id", clientId)
+      .eq("is_active", true)
+      .then(({ data }) => setClientProducts((data as Product[] | null) ?? []));
+  }, [clientId]);
+
   function addTarget(type: "critical" | "major") {
     setTargets((prev) => [
       ...prev,
-      { type, title: "", description: "", due_date: "" },
+      { type, title: "", description: "", due_date: "", interval: "none" },
     ]);
   }
 
@@ -465,16 +478,33 @@ function SetGoalPanel({
     });
     const goalData = await goalRes.json();
 
-    if (targets.length > 0 && goalData.data?.id) {
+    const filteredTargets = targets.filter((t) => t.title.trim());
+    if (filteredTargets.length > 0 && goalData.data?.id) {
       await fetch("/api/targets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           goal_id: goalData.data.id,
           client_id: clientId,
-          targets: targets.filter((t) => t.title.trim()),
+          targets: filteredTargets,
         }),
       });
+
+      // Auto-create daily actions for targets with an interval
+      const recurringTargets = filteredTargets.filter((t) => t.interval !== "none");
+      if (recurringTargets.length > 0) {
+        const supabase = createClient();
+        const actionRows = recurringTargets.map((t, i) => ({
+          client_id: clientId,
+          goal_id: goalData.data.id,
+          label: `[${t.interval === "daily" ? "Daily" : t.interval === "weekly" ? "Weekly" : "Monthly"}] ${t.title}`,
+          group_name: "Targets",
+          target_date: t.due_date || null,
+          sort_order: i,
+          is_active: true,
+        }));
+        await supabase.from("daily_actions").insert(actionRows);
+      }
     }
 
     setSaving(false);
@@ -550,23 +580,24 @@ function SetGoalPanel({
           </div>
           <div>
             <label className="label">Focus products</label>
-            <div className="flex gap-3 flex-wrap">
-              {[
-                ["low", "Low ticket ($7–$27)"],
-                ["mid", "Mid ticket ($997–$2997)"],
-                ["high", "High ticket ($6997–$9997)"],
-              ].map(([val, label]) => (
-                <label key={val} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="accent-amber-brand"
-                    checked={form.focus_products.includes(val)}
-                    onChange={() => toggleProduct(val)}
-                  />
-                  <span className="text-sm text-charcoal">{label}</span>
-                </label>
-              ))}
-            </div>
+            {clientProducts.length === 0 ? (
+              <p className="text-xs text-warmgray mt-1">No products found. Add products in the Products tab first.</p>
+            ) : (
+              <div className="space-y-2 mt-1">
+                {clientProducts.map((p) => (
+                  <label key={p.id} className="flex items-center gap-3 cursor-pointer py-1">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 accent-amber-brand"
+                      checked={form.focus_products.includes(p.id)}
+                      onChange={() => toggleProduct(p.id)}
+                    />
+                    <span className="text-sm text-charcoal font-medium">{p.name}</span>
+                    <span className="text-sm text-warmgray">${p.price.toLocaleString()} {p.currency?.toUpperCase()}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <label className="label">Zoom session link</label>
@@ -583,7 +614,7 @@ function SetGoalPanel({
           <div>
             <label className="label">Notes (optional)</label>
             <textarea
-              className="input resize-none"
+              className="input resize-y"
               rows={2}
               value={form.notes}
               onChange={(e) =>
@@ -635,12 +666,24 @@ function SetGoalPanel({
                   updateTarget(i, "description", e.target.value)
                 }
               />
-              <input
-                type="date"
-                className="input text-sm"
-                value={t.due_date}
-                onChange={(e) => updateTarget(i, "due_date", e.target.value)}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="date"
+                  className="input text-sm"
+                  value={t.due_date}
+                  onChange={(e) => updateTarget(i, "due_date", e.target.value)}
+                />
+                <select
+                  className="input text-sm"
+                  value={t.interval}
+                  onChange={(e) => updateTarget(i, "interval", e.target.value as TargetInput["interval"])}
+                >
+                  <option value="none">No recurrence</option>
+                  <option value="daily">Daily action</option>
+                  <option value="weekly">Weekly action</option>
+                  <option value="monthly">Monthly action</option>
+                </select>
+              </div>
             </div>
           ))}
 
@@ -704,6 +747,11 @@ function ActionsPanel({
   const [templates, setTemplates] = useState<ActionTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateNameMode, setTemplateNameMode] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [selectedActionIds, setSelectedActionIds] = useState<Set<string>>(new Set());
+  const [editingActionId, setEditingActionId] = useState<string | null>(null);
+  const [editActionForm, setEditActionForm] = useState<NewActionForm>({ label: "", group_name: "", notes: "", link_url: "", target_date: "" });
   const [form, setForm] = useState<NewActionForm>({
     label: "",
     group_name: "",
@@ -830,16 +878,22 @@ function ActionsPanel({
     setSelectedTemplate("");
   }
 
-  async function saveAsTemplate() {
-    const name = window.prompt("Template name:");
-    if (!name?.trim()) return;
+  function startSaveAsTemplate() {
+    setSelectedActionIds(new Set(actions.map((a) => a.id)));
+    setTemplateName("");
+    setTemplateNameMode(true);
+  }
+
+  async function confirmSaveAsTemplate() {
+    if (!templateName.trim()) return;
     setSavingTemplate(true);
+    const selected = actions.filter((a) => selectedActionIds.has(a.id));
     const res = await fetch("/api/admin/action-templates", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: name.trim(),
-        actions: actions.map((a) => ({
+        name: templateName.trim(),
+        actions: selected.map((a) => ({
           label: a.label,
           group_name: a.group_name,
           notes: a.notes,
@@ -853,6 +907,21 @@ function ActionsPanel({
       if (newTemplate) setTemplates((prev) => [...prev, newTemplate]);
     }
     setSavingTemplate(false);
+    setTemplateNameMode(false);
+    setTemplateName("");
+  }
+
+  async function saveActionEdit(actionId: string) {
+    const supabase = createClient();
+    await supabase.from("daily_actions").update({
+      label: editActionForm.label,
+      group_name: editActionForm.group_name || null,
+      notes: editActionForm.notes || null,
+      link_url: editActionForm.link_url || null,
+      target_date: editActionForm.target_date || null,
+    }).eq("id", actionId);
+    setActions((prev) => prev.map((a) => a.id === actionId ? { ...a, ...editActionForm } : a));
+    setEditingActionId(null);
   }
 
   if (!goal) {
@@ -892,13 +961,12 @@ function ActionsPanel({
             </select>
           )}
           {/* Save as Template */}
-          {actions.length > 0 && (
+          {actions.length > 0 && !templateNameMode && (
             <button
-              onClick={saveAsTemplate}
-              disabled={savingTemplate}
-              className="border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-sm font-medium rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
+              onClick={startSaveAsTemplate}
+              className="border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-sm font-medium rounded-lg px-3 py-2 transition-colors"
             >
-              {savingTemplate ? "Saving…" : "Save as Template"}
+              Save as Template
             </button>
           )}
           {/* Bulk Add toggle */}
@@ -910,6 +978,35 @@ function ActionsPanel({
           </button>
         </div>
       </div>
+
+      {/* Inline Template Naming Bar */}
+      {templateNameMode && (
+        <div className="bg-amber-wash border border-amber-light rounded-xl p-4 flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-medium text-charcoal">Template name:</span>
+          <input
+            autoFocus
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFAA00] flex-1 min-w-[200px]"
+            placeholder="e.g. 90-day content plan"
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && confirmSaveAsTemplate()}
+          />
+          <button
+            onClick={confirmSaveAsTemplate}
+            disabled={savingTemplate || !templateName.trim()}
+            className="bg-[#FFAA00] text-black text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-[#e69900] disabled:opacity-50"
+          >
+            {savingTemplate ? "Saving…" : "Save Template"}
+          </button>
+          <button
+            onClick={() => setTemplateNameMode(false)}
+            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200"
+          >
+            Cancel
+          </button>
+          <p className="w-full text-xs text-warmgray mt-1">Check/uncheck actions below to include in the template.</p>
+        </div>
+      )}
 
       {/* Grouped Actions List */}
       {actions.length === 0 ? (
@@ -925,58 +1022,69 @@ function ActionsPanel({
               </div>
               {groupActions.map((action) => {
                 const globalIdx = actions.findIndex((a) => a.id === action.id);
+                const isEditing = editingActionId === action.id;
                 return (
-                  <div
-                    key={action.id}
-                    className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50/40"
-                  >
-                    <div className="flex flex-col gap-0.5">
-                      <button
-                        onClick={() => moveAction(action.id, "up")}
-                        disabled={globalIdx === 0}
-                        className="text-gray-300 hover:text-gray-500 disabled:opacity-20 transition-colors"
-                      >
-                        <ChevronUp size={14} />
-                      </button>
-                      <button
-                        onClick={() => moveAction(action.id, "down")}
-                        disabled={globalIdx === actions.length - 1}
-                        className="text-gray-300 hover:text-gray-500 disabled:opacity-20 transition-colors"
-                      >
-                        <ChevronDown size={14} />
-                      </button>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-charcoal truncate">
-                        {action.label}
-                      </p>
-                      {action.notes && (
-                        <p className="text-xs text-warmgray truncate">
-                          {action.notes}
-                        </p>
-                      )}
-                      {action.link_url && (
-                        <a
-                          href={action.link_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-[#FFAA00] hover:underline truncate block"
+                  <div key={action.id} className="border-b border-gray-50 last:border-0">
+                    {isEditing ? (
+                      <div className="px-4 py-3 bg-amber-50 space-y-2">
+                        <input
+                          className="input text-sm w-full"
+                          placeholder="Label *"
+                          value={editActionForm.label}
+                          onChange={(e) => setEditActionForm((p) => ({ ...p, label: e.target.value }))}
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input className="input text-sm" placeholder="Group name" value={editActionForm.group_name} onChange={(e) => setEditActionForm((p) => ({ ...p, group_name: e.target.value }))} />
+                          <input type="date" className="input text-sm" value={editActionForm.target_date} onChange={(e) => setEditActionForm((p) => ({ ...p, target_date: e.target.value }))} />
+                        </div>
+                        <textarea className="input text-sm w-full resize-y" rows={2} placeholder="Notes" value={editActionForm.notes} onChange={(e) => setEditActionForm((p) => ({ ...p, notes: e.target.value }))} />
+                        <input type="url" className="input text-sm w-full" placeholder="Link URL (https://…)" value={editActionForm.link_url} onChange={(e) => setEditActionForm((p) => ({ ...p, link_url: e.target.value }))} />
+                        <div className="flex gap-2">
+                          <button onClick={() => saveActionEdit(action.id)} className="bg-[#FFAA00] text-black text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-[#e69900]">Save</button>
+                          <button onClick={() => setEditingActionId(null)} className="border border-gray-200 text-xs text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-100">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50/40">
+                        {/* Checkbox for template selection */}
+                        {templateNameMode && (
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 accent-[#FFAA00] shrink-0"
+                            checked={selectedActionIds.has(action.id)}
+                            onChange={() => {
+                              setSelectedActionIds((prev) => {
+                                const next = new Set(prev);
+                                next.has(action.id) ? next.delete(action.id) : next.add(action.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        )}
+                        <div className="flex flex-col gap-0.5">
+                          <button onClick={() => moveAction(action.id, "up")} disabled={globalIdx === 0} className="text-gray-300 hover:text-gray-500 disabled:opacity-20 transition-colors"><ChevronUp size={14} /></button>
+                          <button onClick={() => moveAction(action.id, "down")} disabled={globalIdx === actions.length - 1} className="text-gray-300 hover:text-gray-500 disabled:opacity-20 transition-colors"><ChevronDown size={14} /></button>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-charcoal truncate">{action.label}</p>
+                          {action.notes && <p className="text-xs text-warmgray truncate">{action.notes}</p>}
+                          {action.link_url && (
+                            <a href={action.link_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#FFAA00] hover:underline truncate block">{action.link_url}</a>
+                          )}
+                        </div>
+                        {action.target_date && <span className="text-xs text-warmgray shrink-0">{action.target_date}</span>}
+                        <button
+                          onClick={() => {
+                            setEditingActionId(action.id);
+                            setEditActionForm({ label: action.label, group_name: action.group_name ?? "", notes: action.notes ?? "", link_url: action.link_url ?? "", target_date: action.target_date ?? "" });
+                          }}
+                          className="text-gray-300 hover:text-[#FFAA00] shrink-0 transition-colors"
                         >
-                          {action.link_url}
-                        </a>
-                      )}
-                    </div>
-                    {action.target_date && (
-                      <span className="text-xs text-warmgray shrink-0">
-                        {action.target_date}
-                      </span>
+                          <Pencil size={15} />
+                        </button>
+                        <button onClick={() => deleteAction(action.id)} className="text-gray-300 hover:text-red-500 shrink-0 transition-colors"><Trash2 size={16} /></button>
+                      </div>
                     )}
-                    <button
-                      onClick={() => deleteAction(action.id)}
-                      className="text-gray-300 hover:text-red-500 shrink-0 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
                   </div>
                 );
               })}
@@ -1004,7 +1112,7 @@ function ActionsPanel({
           <div>
             <label className="label text-xs">Actions (one per line)</label>
             <textarea
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFAA00] w-full resize-none"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFAA00] w-full resize-y"
               rows={6}
               placeholder={"Post 1 piece of content\nReply to 10 comments\nSend 5 DMs"}
               value={bulkText}
@@ -1060,7 +1168,7 @@ function ActionsPanel({
             <div className="col-span-2">
               <label className="label text-xs">Notes</label>
               <textarea
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFAA00] w-full resize-none"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFAA00] w-full resize-y"
                 rows={2}
                 value={form.notes}
                 onChange={(e) =>

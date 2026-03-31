@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 
 // Meta webhook verification
 export async function GET(request: Request) {
@@ -16,7 +17,22 @@ export async function GET(request: Request) {
 
 // Meta delivery/read status updates
 export async function POST(request: Request) {
-  const body = await request.json();
+  const rawBody = await request.text();
+
+  // Verify Meta's HMAC signature
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (appSecret) {
+    const signature = request.headers.get("x-hub-signature-256") ?? "";
+    const expected = `sha256=${crypto
+      .createHmac("sha256", appSecret)
+      .update(rawBody)
+      .digest("hex")}`;
+    if (signature !== expected) {
+      return new Response("Forbidden", { status: 403 });
+    }
+  }
+
+  const body = JSON.parse(rawBody);
 
   try {
     const supabase = createClient();
@@ -38,8 +54,9 @@ export async function POST(request: Request) {
         }
       }
     }
-  } catch {
-    // Silently ignore parse errors — Meta expects 200 always
+  } catch (err) {
+    console.error("[whatsapp/webhook] Error processing payload:", err);
+    // Still return 200 — Meta requires it
   }
 
   return NextResponse.json({ ok: true });

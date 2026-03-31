@@ -35,7 +35,10 @@ export async function sendWhatsAppTemplate(
 ): Promise<WAResult> {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-  return callApi(phoneNumberId!, accessToken!, {
+  if (!phoneNumberId || !accessToken) {
+    return { messageId: null, error: "WhatsApp env vars not configured" };
+  }
+  return callApi(phoneNumberId, accessToken, {
     messaging_product: "whatsapp",
     to: phone,
     type: "template",
@@ -59,7 +62,10 @@ export async function sendWhatsAppTemplate(
 export async function sendWhatsAppText(phone: string, message: string): Promise<WAResult> {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-  return callApi(phoneNumberId!, accessToken!, {
+  if (!phoneNumberId || !accessToken) {
+    return { messageId: null, error: "WhatsApp env vars not configured" };
+  }
+  return callApi(phoneNumberId, accessToken, {
     messaging_product: "whatsapp",
     recipient_type: "individual",
     to: phone,
