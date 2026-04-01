@@ -83,13 +83,13 @@ export default function IncomePage() {
     if (!user) return;
 
     const [goalRes, logsRes, productsRes] = await Promise.all([
-      supabase.from("goals").select("id").eq("client_id", user.id).eq("status", "active").single() as Promise<{ data: Goal | null }>,
-      supabase.from("daily_logs").select("*").eq("client_id", user.id).order("log_date", { ascending: false }).limit(90) as Promise<{ data: DailyLog[] | null }>,
+      supabase.from("goals").select("id").eq("client_id", user.id).eq("status", "active").single(),
+      supabase.from("daily_logs").select("*").eq("client_id", user.id).order("log_date", { ascending: false }).limit(90),
       supabase.from("products").select("*").eq("client_id", user.id).eq("is_active", true),
     ]);
 
-    if (goalRes.data) setGoalId(goalRes.data.id);
-    setLogs(logsRes.data ?? []);
+    if (goalRes.data) setGoalId((goalRes.data as { id: string }).id);
+    setLogs((logsRes.data as DailyLog[] | null) ?? []);
     const prods = (productsRes.data as Product[] | null) ?? [];
     setProducts(prods);
     if (prods.length > 0 && !calcProductId) setCalcProductId(prods[0].id);
