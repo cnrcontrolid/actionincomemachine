@@ -35,39 +35,46 @@ export default function ClientSidebar({ clientName }: { clientName: string }) {
   }
 
   return (
-    <aside className="flex flex-col w-64 min-h-screen bg-white border-r border-amber-light">
-      <div className="px-6 py-5 border-b border-amber-light">
-        <p className="font-heading font-bold text-amber-brand text-lg leading-tight">Action Income</p>
-        <p className="font-heading font-bold text-amber-brand text-lg leading-tight">Machine</p>
+    <aside className="flex flex-col w-52 h-screen bg-white border-r border-gray-100 shrink-0">
+      {/* Logo */}
+      <div className="px-5 pt-5 pb-4">
+        <p className="font-heading font-bold text-amber-brand text-[15px] leading-snug">
+          Action Income<br />Machine
+        </p>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {navItems.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={clsx(
-              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
-              pathname === href || pathname.startsWith(href + "/")
-                ? "bg-amber-wash text-amber-brand"
-                : "text-warmgray hover:bg-cream hover:text-charcoal"
-            )}
-          >
-            <Icon size={18} />
-            {label}
-          </Link>
-        ))}
+      {/* Nav */}
+      <nav className="flex-1 px-2 py-1 space-y-0.5">
+        {navItems.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(href + "/");
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={clsx(
+                "flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-colors",
+                active
+                  ? "bg-[#FFF8E8] text-[#FFAA00]"
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+              )}
+            >
+              <Icon size={15} strokeWidth={active ? 2.5 : 2} />
+              {label}
+            </Link>
+          );
+        })}
       </nav>
 
-      <div className="px-3 py-4 border-t border-amber-light">
-        <div className="px-3 py-2 mb-2">
-          <p className="text-xs text-warmgray font-medium truncate">{clientName}</p>
+      {/* Footer */}
+      <div className="px-2 py-3 border-t border-gray-100">
+        <div className="px-3 py-1 mb-0.5">
+          <p className="text-[11px] text-gray-400 font-medium truncate">{clientName}</p>
         </div>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-warmgray hover:bg-cream hover:text-charcoal transition-colors w-full"
+          className="flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors w-full"
         >
-          <LogOut size={18} />
+          <LogOut size={15} strokeWidth={2} />
           Sign out
         </button>
       </div>

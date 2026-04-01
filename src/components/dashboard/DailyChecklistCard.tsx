@@ -31,7 +31,6 @@ export default function DailyChecklistCard({ actions, completions, logDate }: Da
   async function toggle(actionId: string) {
     const next = !optimistic[actionId];
     setOptimistic((prev) => ({ ...prev, [actionId]: next }));
-
     startTransition(async () => {
       await fetch("/api/action-completions", {
         method: "POST",
@@ -41,7 +40,6 @@ export default function DailyChecklistCard({ actions, completions, logDate }: Da
     });
   }
 
-  // Stable date boundaries — computed once per mount (day doesn't change mid-session)
   const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
   const weekEnd = useMemo(() => endOfWeek(new Date(), { weekStartsOn: 1 }), []);
   const monthStart = useMemo(() => startOfMonth(new Date()), []);
@@ -75,7 +73,9 @@ export default function DailyChecklistCard({ actions, completions, logDate }: Da
     }, {});
   }
 
-  const completed = actions.filter((a) => optimistic[a.id]).length;
+  const completedCount = actions.filter((a) => optimistic[a.id]).length;
+  const totalCount = actions.length;
+  const progressPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "today", label: "Today" },
@@ -90,18 +90,18 @@ export default function DailyChecklistCard({ actions, completions, logDate }: Da
         <button
           onClick={() => toggle(action.id)}
           className={clsx(
-            "flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl border transition-all",
+            "flex items-center gap-3 w-full text-left px-3 py-2 rounded-lg transition-colors",
             done
-              ? "bg-green-50 border-green-200 text-green-800"
-              : "bg-white border-gray-200 text-gray-800 hover:border-[#FFAA00]"
+              ? "text-gray-400"
+              : "text-charcoal hover:bg-gray-50"
           )}
         >
           {done ? (
-            <CheckCircle2 size={18} className="text-[#30B33C] shrink-0" />
+            <CheckCircle2 size={16} className="text-[#30B33C] shrink-0" />
           ) : (
-            <Circle size={18} className="text-gray-400 shrink-0" />
+            <Circle size={16} className="text-gray-300 shrink-0" />
           )}
-          <span className={clsx("text-sm flex-1", done && "line-through opacity-70")}>
+          <span className={clsx("text-sm flex-1 text-left", done && "line-through")}>
             {action.label}
           </span>
           {action.link_url && (
@@ -110,9 +110,9 @@ export default function DailyChecklistCard({ actions, completions, logDate }: Da
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-gray-400 hover:text-[#FFAA00] shrink-0"
+              className="text-gray-300 hover:text-[#FFAA00] shrink-0"
             >
-              <ExternalLink size={14} />
+              <ExternalLink size={13} />
             </a>
           )}
         </button>
@@ -124,10 +124,10 @@ export default function DailyChecklistCard({ actions, completions, logDate }: Da
     const groups = groupByGroupName(items);
     return Object.entries(groups).map(([groupName, groupActions]) => (
       <div key={groupName}>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5 px-3">
           {groupName}
         </p>
-        <ul className="space-y-2 mb-4">
+        <ul className="mb-4">
           {groupActions.map(renderActionRow)}
         </ul>
       </div>
@@ -135,23 +135,33 @@ export default function DailyChecklistCard({ actions, completions, logDate }: Da
   }
 
   return (
-    <div className="card">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-heading font-bold text-charcoal uppercase tracking-wide">ACTIONS</h3>
-        <span className="text-sm text-gray-500">{completed}/{actions.length} done</span>
+    <div className="card flex flex-col h-full min-h-0">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3 shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-charcoal">Actions</span>
+          <span className="text-xs text-gray-400">{completedCount}/{totalCount}</span>
+        </div>
+        {/* Mini progress bar */}
+        <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-[#30B33C] rounded-full transition-all duration-500"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-4">
+      {/* Segmented tabs */}
+      <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5 mb-3 shrink-0 w-fit">
         {tabs.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className={clsx(
-              "flex-1 text-xs font-semibold py-1.5 rounded-lg transition-all",
+              "px-3 py-1 text-[12px] font-semibold rounded-md transition-all",
               tab === key
-                ? "bg-white text-[#FFAA00] shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-white text-charcoal shadow-sm"
+                : "text-gray-400 hover:text-gray-600"
             )}
           >
             {label}
@@ -159,19 +169,22 @@ export default function DailyChecklistCard({ actions, completions, logDate }: Da
         ))}
       </div>
 
-      {filteredActions.length === 0 ? (
-        <p className="text-gray-400 text-sm text-center py-4">
-          {tab === "today"
-            ? "No daily actions set yet. Your coach will add them after your goal session."
-            : `No actions scheduled for this ${tab === "week" ? "week" : "month"}.`}
-        </p>
-      ) : tab === "today" ? (
-        <ul className="space-y-2">
-          {filteredActions.map(renderActionRow)}
-        </ul>
-      ) : (
-        renderGrouped(filteredActions)
-      )}
+      {/* Action list — scrollable */}
+      <div className="flex-1 overflow-y-auto -mx-1">
+        {filteredActions.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">
+            {tab === "today"
+              ? "No actions set yet. Your coach will add them after your goal session."
+              : `No actions scheduled for this ${tab === "week" ? "week" : "month"}.`}
+          </p>
+        ) : tab === "today" ? (
+          <ul>
+            {filteredActions.map(renderActionRow)}
+          </ul>
+        ) : (
+          renderGrouped(filteredActions)
+        )}
+      </div>
     </div>
   );
 }

@@ -13,53 +13,50 @@ export default function GoalProgressCard({ goal, revenueToDate }: GoalProgressCa
   const percent = getProgressPercent(revenueToDate, goal.revenue_target);
 
   return (
-    <div className="card flex flex-col sm:flex-row items-center gap-6">
-      <ProgressRing
-        percent={percent}
-        size={140}
-        label={`${Math.round(percent)}%`}
-        sublabel="of target"
-      />
-      <div className="flex-1 space-y-3">
+    <div className="card">
+      <div className="flex items-center gap-5">
+        <ProgressRing percent={percent} size={100} strokeWidth={8} label={`${Math.round(percent)}%`} sublabel="done" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Day {dayNum} of 90 · {daysLeft}d left</p>
+          <h2 className="font-heading font-bold text-charcoal text-base leading-snug line-clamp-2">{goal.title}</h2>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3 mt-4">
         <div>
-          <h3 className="font-heading font-bold text-charcoal text-lg">{goal.title}</h3>
-          <p className="text-warmgray text-sm">Day {dayNum} of 90 &bull; {daysLeft} days remaining</p>
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Revenue to date</p>
+          <p className="font-heading font-bold text-[#FFAA00] text-xl mt-0.5">${revenueToDate.toLocaleString()}</p>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-amber-wash rounded-xl p-3">
-            <p className="text-xs text-warmgray font-medium uppercase tracking-wide">Revenue to date</p>
-            <p className="font-heading font-bold text-amber-brand text-xl mt-0.5">
-              ${revenueToDate.toLocaleString()}
-            </p>
-          </div>
-          <div className="bg-amber-wash rounded-xl p-3">
-            <p className="text-xs text-warmgray font-medium uppercase tracking-wide">Target</p>
-            <p className="font-heading font-bold text-charcoal text-xl mt-0.5">
-              ${goal.revenue_target.toLocaleString()}
-            </p>
-          </div>
+        <div>
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Target</p>
+          <p className="font-heading font-bold text-charcoal text-xl mt-0.5">${goal.revenue_target.toLocaleString()}</p>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
+      </div>
+
+      {/* Month milestones */}
+      {(goal.month1_target || goal.month2_target || goal.month3_target) && (
+        <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
           {goal.month1_target && (
-            <div className="bg-cream rounded-lg p-2">
-              <p className="text-xs text-warmgray">Month 1</p>
-              <p className="text-sm font-semibold text-charcoal">${goal.month1_target.toLocaleString()}</p>
+            <div className="flex-1 text-center bg-gray-50 rounded-lg py-1.5">
+              <p className="text-[10px] text-gray-400">M1</p>
+              <p className="text-xs font-semibold text-charcoal">${goal.month1_target.toLocaleString()}</p>
             </div>
           )}
           {goal.month2_target && (
-            <div className="bg-cream rounded-lg p-2">
-              <p className="text-xs text-warmgray">Month 2</p>
-              <p className="text-sm font-semibold text-charcoal">${goal.month2_target.toLocaleString()}</p>
+            <div className="flex-1 text-center bg-gray-50 rounded-lg py-1.5">
+              <p className="text-[10px] text-gray-400">M2</p>
+              <p className="text-xs font-semibold text-charcoal">${goal.month2_target.toLocaleString()}</p>
             </div>
           )}
           {goal.month3_target && (
-            <div className="bg-cream rounded-lg p-2">
-              <p className="text-xs text-warmgray">Month 3</p>
-              <p className="text-sm font-semibold text-charcoal">${goal.month3_target.toLocaleString()}</p>
+            <div className="flex-1 text-center bg-gray-50 rounded-lg py-1.5">
+              <p className="text-[10px] text-gray-400">M3</p>
+              <p className="text-xs font-semibold text-charcoal">${goal.month3_target.toLocaleString()}</p>
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

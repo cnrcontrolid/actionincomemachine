@@ -41,92 +41,100 @@ export default function GoalsPage() {
     });
   }, []);
 
-  if (loading) return <div className="text-warmgray p-8">Loading...</div>;
+  if (loading) return <div className="flex items-center justify-center h-full text-sm text-gray-400">Loading…</div>;
 
   if (!goal) {
     return (
-      <div className="max-w-3xl mx-auto">
-        <h1 className="font-heading font-bold text-3xl text-charcoal mb-6">My Goals</h1>
-        <div className="card text-center py-12">
-          <p className="font-heading text-xl text-charcoal font-bold">No active goal yet</p>
-          <p className="text-warmgray mt-2 text-sm">Your coach will set this up after your onboarding call.</p>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <p className="font-heading font-bold text-lg text-charcoal">No active goal yet</p>
+          <p className="text-sm text-gray-400 mt-1">Your coach will set this up after your onboarding call.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <h1 className="font-heading font-bold text-3xl text-charcoal">My Goals</h1>
+    <div className="flex gap-5 h-full min-h-0">
+      {/* Left column — progress */}
+      <div className="w-72 shrink-0 flex flex-col gap-3">
+        <GoalProgressCard goal={goal} revenueToDate={getRevenueTotal(logs)} />
 
-      <GoalProgressCard goal={goal} revenueToDate={getRevenueTotal(logs)} />
+        {goal.zoom_link && (
+          <div className="card py-3 px-4 flex items-center justify-between">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Coaching session</p>
+            <a
+              href={goal.zoom_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-semibold text-[#FFAA00] hover:underline"
+            >
+              Join →
+            </a>
+          </div>
+        )}
 
-      {goal.zoom_link && (
-        <div className="card py-3 px-5 flex items-center justify-between">
-          <p className="text-sm font-medium text-charcoal">Next coaching session</p>
-          <a href={goal.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#FFAA00] hover:underline">
-            Join Zoom →
-          </a>
-        </div>
-      )}
+        {goal.notes && (
+          <div className="card py-3 px-4">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Notes from coach</p>
+            <p className="text-sm text-charcoal leading-relaxed">{goal.notes}</p>
+          </div>
+        )}
+      </div>
 
-      {goal.notes && (
-        <div className="bg-amber-wash rounded-xl px-5 py-4">
-          <p className="text-sm text-charcoal">{goal.notes}</p>
-        </div>
-      )}
-
-      {/* Tab Bar */}
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-0">
+      {/* Right column — targets / products */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Segmented tab control */}
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 w-fit mb-3 shrink-0">
           {([
-            { id: "targets", label: "Your Targets" },
-            { id: "products", label: "Your Products" },
+            { id: "targets", label: "Targets" },
+            { id: "products", label: "Products" },
           ] as { id: GoalTab; label: string }[]).map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-5 py-3 text-sm font-medium transition-colors border-b-2 ${
+              className={`px-4 py-1.5 text-[13px] font-semibold rounded-md transition-all ${
                 activeTab === tab.id
-                  ? "border-[#FFAA00] text-[#FFAA00]"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "bg-white text-charcoal shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {tab.label}
             </button>
           ))}
-        </nav>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === "targets" && (
-        <div className="card">
-          <TargetsList targets={targets} canMarkMet={true} />
-          {targets.length === 0 && (
-            <p className="text-sm text-warmgray text-center py-6">No targets set yet. Your coach will add these.</p>
-          )}
         </div>
-      )}
 
-      {activeTab === "products" && (
-        <div className="card">
-          {products.length === 0 ? (
-            <p className="text-sm text-warmgray text-center py-6">No products set yet. Your coach will add these.</p>
-          ) : (
-            <div className="space-y-2">
-              {products.map((p) => (
-                <div key={p.id} className="flex items-center justify-between py-2 border-b border-amber-light last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-charcoal">{p.name}</p>
-                    <p className="text-xs text-warmgray">{tierLabel[p.tier]}</p>
-                  </div>
-                  <p className="font-heading font-bold text-amber-brand">${p.price.toLocaleString()}</p>
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto card p-0">
+          {activeTab === "targets" && (
+            <div className="p-5">
+              <TargetsList targets={targets} canMarkMet={true} />
+              {targets.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-8">No targets set yet. Your coach will add these.</p>
+              )}
+            </div>
+          )}
+          {activeTab === "products" && (
+            <div className="p-5">
+              {products.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">No products set yet. Your coach will add these.</p>
+              ) : (
+                <div className="space-y-2">
+                  {products.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
+                      <div>
+                        <p className="text-sm font-medium text-charcoal">{p.name}</p>
+                        <p className="text-xs text-gray-400">{tierLabel[p.tier]}</p>
+                      </div>
+                      <p className="font-heading font-bold text-[#FFAA00]">${p.price.toLocaleString()}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -17,10 +17,12 @@ export default async function ClientLayout({ children }: { children: React.React
   if (profile?.role === "admin") redirect("/admin/clients");
 
   return (
-    <div className="flex min-h-screen bg-cream">
+    <div className="flex h-screen bg-cream overflow-hidden">
       <ClientSidebar clientName={profile?.full_name ?? user.email ?? "Client"} />
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        {children}
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-5 md:p-6 h-full">
+          {children}
+        </div>
       </main>
     </div>
   );

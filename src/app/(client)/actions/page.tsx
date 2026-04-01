@@ -29,25 +29,20 @@ export default async function ActionsPage() {
   const actions = (actionsRes.data as DailyAction[] | null) ?? [];
   const completions = (completionsRes.data as DailyActionCompletion[] | null) ?? [];
 
-  return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="font-heading font-bold text-3xl text-charcoal">Actions</h1>
-        <p className="text-warmgray mt-1">Your daily action checklist</p>
-      </div>
-
-      {!goalId ? (
-        <div className="card text-center py-12">
-          <p className="font-heading text-xl text-charcoal font-bold">No active goal yet</p>
-          <p className="text-warmgray mt-2 text-sm">Your coach will set up your 90-day goal and actions after your onboarding session.</p>
+  if (!goalId) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <p className="font-heading font-bold text-lg text-charcoal">No active goal yet</p>
+          <p className="text-sm text-gray-400 mt-1">Your coach will set up your actions after your onboarding session.</p>
         </div>
-      ) : (
-        <DailyChecklistCard
-          actions={actions}
-          completions={completions}
-          logDate={today}
-        />
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl h-full flex flex-col">
+      <DailyChecklistCard actions={actions} completions={completions} logDate={today} />
     </div>
   );
 }

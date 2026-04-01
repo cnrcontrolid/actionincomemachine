@@ -16,7 +16,7 @@
 
 @layer components {
   .card {
-    @apply bg-white rounded-2xl border border-amber-light shadow-sm p-6;
+    @apply bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.07)] p-5;
   }
   .btn-primary {
     @apply bg-amber-brand text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
@@ -28,10 +28,10 @@
     @apply text-warmgray font-medium px-4 py-2 rounded-xl hover:bg-amber-wash transition-colors;
   }
   .input {
-    @apply w-full border border-amber-light rounded-xl px-4 py-2.5 text-charcoal bg-white placeholder:text-warmgray focus:outline-none focus:ring-2 focus:ring-amber-brand/30 focus:border-amber-brand transition-colors;
+    @apply w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-charcoal bg-white placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#FFAA00]/50 focus:border-[#FFAA00] transition-colors;
   }
   .label {
-    @apply block text-sm font-medium text-charcoal mb-1.5;
+    @apply block text-xs font-semibold text-gray-500 mb-1 tracking-wide;
   }
   .badge-critical {
     @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700;
