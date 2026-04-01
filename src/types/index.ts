@@ -1,6 +1,8 @@
 export type UserRole = "admin" | "client";
 export type GoalStatus = "active" | "completed" | "abandoned";
 export type TargetType = "critical" | "major";
+export type TargetTypeV3 = "major" | "production" | "critical";
+export type TargetRecurrence = "none" | "daily" | "weekly" | "biweekly" | "monthly";
 export type ProductTier = "low" | "mid" | "high";
 export type ProductCurrency = "usd" | "gbp" | "eur" | "cad" | "inr" | "aud";
 export type SequenceTrigger = "days_since_start" | "goal_milestone" | "manual";
@@ -27,7 +29,7 @@ export interface Profile {
   facebook_profile: string | null;
   linkedin_profile: string | null;
   youtube_channel: string | null;
-  // follower counts (manually entered)
+  // follower counts (kept for backward compat; now also tracked per-day in daily_logs)
   instagram_followers: number;
   youtube_subscribers: number;
   facebook_friends: number;
@@ -35,9 +37,27 @@ export interface Profile {
   created_at: string;
 }
 
+// ── V3: Annual Goal ──────────────────────────────────────────
+export interface AnnualGoal {
+  id: string;
+  client_id: string;
+  title: string;
+  target_amount: number;
+  year: number;
+  notes: string | null;
+  created_at: string;
+}
+
+// ── Goal (90-day sprint) ─────────────────────────────────────
 export interface Goal {
   id: string;
   client_id: string;
+  // V3 additions
+  annual_goal_id: string | null;
+  purpose: string | null;
+  policies: string[];       // jsonb array of policy strings
+  plan_steps: string[];     // jsonb array of plan step strings
+  // core
   title: string;
   start_date: string;
   end_date: string;
@@ -52,10 +72,25 @@ export interface Goal {
   created_at: string;
 }
 
+// ── V3: Project ──────────────────────────────────────────────
+export interface Project {
+  id: string;
+  goal_id: string;
+  client_id: string;
+  name: string;
+  description: string | null;
+  estimated_hours: number | null;
+  actual_hours: number;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+// ── Product (goal_id now optional — shared across goals) ─────
 export interface Product {
   id: string;
   client_id: string;
-  goal_id: string;
+  goal_id: string | null;
   tier: ProductTier;
   name: string;
   price: number;
@@ -64,11 +99,17 @@ export interface Product {
   created_at: string;
 }
 
+// ── Target ───────────────────────────────────────────────────
 export interface Target {
   id: string;
   goal_id: string;
   client_id: string;
+  // legacy field kept for backward compat
   type: TargetType;
+  // V3 fields
+  project_id: string | null;
+  target_type: TargetTypeV3;
+  recurrence: TargetRecurrence;
   title: string;
   description: string | null;
   due_date: string | null;
@@ -78,6 +119,7 @@ export interface Target {
   created_at: string;
 }
 
+// ── Daily Log ────────────────────────────────────────────────
 export interface DailyLog {
   id: string;
   client_id: string;
@@ -87,7 +129,7 @@ export interface DailyLog {
   income_low: number;
   income_mid: number;
   income_high: number;
-  // new simplified fields
+  // primary income field
   income_total: number;
   money_in_bank: number;
   expenses: number;
@@ -102,10 +144,14 @@ export interface DailyLog {
   created_at: string;
 }
 
+// ── Daily Action ─────────────────────────────────────────────
 export interface DailyAction {
   id: string;
   goal_id: string;
   client_id: string;
+  // V3 additions
+  project_id: string | null;
+  estimated_minutes: number | null;
   label: string;
   group_name: string | null;
   notes: string | null;
@@ -123,6 +169,40 @@ export interface DailyActionCompletion {
   completed: boolean;
 }
 
+// ── V3: Win ──────────────────────────────────────────────────
+export interface Win {
+  id: string;
+  client_id: string;
+  goal_id: string | null;
+  win_date: string;
+  description: string;
+  rating: number; // 1–5
+  created_at: string;
+}
+
+// ── V3: Project Template ─────────────────────────────────────
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  created_by: string | null;
+  estimated_hours: number | null;
+  created_at: string;
+}
+
+export interface ProjectTemplateAction {
+  id: string;
+  template_id: string;
+  label: string;
+  group_name: string | null;
+  notes: string | null;
+  link_url: string | null;
+  estimated_minutes: number | null;
+  sort_order: number;
+  created_at: string;
+}
+
+// ── Action Templates (legacy) ────────────────────────────────
 export interface ActionTemplate {
   id: string;
   name: string;
@@ -142,6 +222,7 @@ export interface ActionTemplateItem {
   created_at: string;
 }
 
+// ── Email / WhatsApp ──────────────────────────────────────────
 export interface EmailSequence {
   id: string;
   name: string;
@@ -177,6 +258,7 @@ export interface WhatsAppMessage {
   created_at: string;
 }
 
+// ── Trend / Content ──────────────────────────────────────────
 export interface TrendStep {
   id: string;
   condition: TrendCondition;

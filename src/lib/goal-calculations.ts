@@ -9,8 +9,14 @@ export function getDaysRemaining(endDate: string, today = new Date()): number {
   return Math.max(0, differenceInDays(parseISO(endDate), today));
 }
 
+/** Sum income across logs — uses income_total (V3), falls back to legacy tier sum */
 export function getRevenueTotal(logs: DailyLog[]): number {
-  return logs.reduce((sum, l) => sum + l.income_low + l.income_mid + l.income_high, 0);
+  return logs.reduce((sum, l) => {
+    const total = l.income_total ?? 0;
+    if (total > 0) return sum + total;
+    // legacy fallback
+    return sum + (l.income_low ?? 0) + (l.income_mid ?? 0) + (l.income_high ?? 0);
+  }, 0);
 }
 
 export function getProgressPercent(current: number, target: number): number {
@@ -24,10 +30,13 @@ export function getPaceTarget(revenueTarget: number, startDate: string, today = 
   return (revenueTarget / 90) * dayNum;
 }
 
-/** Net income today across all product tiers */
+/** Net income for a log entry */
 export function getTodayNet(log: DailyLog | null): number {
   if (!log) return 0;
-  return log.income_low + log.income_mid + log.income_high - log.expenses;
+  const income = (log.income_total ?? 0) > 0
+    ? log.income_total
+    : (log.income_low ?? 0) + (log.income_mid ?? 0) + (log.income_high ?? 0);
+  return income - (log.expenses ?? 0);
 }
 
 /** Determine the current trend condition for this client */
@@ -51,7 +60,11 @@ export function getTrendCondition(
   // Check: overdue unmet critical target
   const todayStr = format(today, "yyyy-MM-dd");
   const missedCritical = targets.some(
-    (t) => t.type === "critical" && !t.is_met && t.due_date && t.due_date < todayStr
+    (t) =>
+      (t.target_type === "critical" || t.type === "critical") &&
+      !t.is_met &&
+      t.due_date &&
+      t.due_date < todayStr
   );
   if (missedCritical) return "critical_target_missed";
 
@@ -74,7 +87,10 @@ export function buildCumulativeSeries(
   const sorted = [...logs].sort((a, b) => a.log_date.localeCompare(b.log_date));
   let cumulative = 0;
   return sorted.map((log) => {
-    cumulative += log.income_low + log.income_mid + log.income_high;
+    const inc = (log.income_total ?? 0) > 0
+      ? log.income_total
+      : (log.income_low ?? 0) + (log.income_mid ?? 0) + (log.income_high ?? 0);
+    cumulative += inc;
     const dayNum = getDayNumber(startDate, parseISO(log.log_date));
     return {
       date: log.log_date,
